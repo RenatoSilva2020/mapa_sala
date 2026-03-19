@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { DndContext, DragEndEvent, useSensor, useSensors, PointerSensor, TouchSensor, closestCenter, DragOverlay } from '@dnd-kit/core';
 import { Trash2, Users, Loader2, Edit, Plus, Download, Menu, X as CloseIcon, DoorOpen, Monitor, Lock, Unlock, Save, History, LogOut } from 'lucide-react';
 import html2canvas from 'html2canvas';
@@ -150,6 +150,74 @@ export default function App() {
       }
     };
     fetchData();
+  }, []);
+
+  // Refs para acessar o estado atual dentro do listener de popstate sem recriar o efeito
+  const isDirtyRef = useRef(isDirty);
+  const isSystemClosedRef = useRef(isSystemClosed);
+
+  useEffect(() => {
+    isDirtyRef.current = isDirty;
+    isSystemClosedRef.current = isSystemClosed;
+  }, [isDirty, isSystemClosed]);
+
+  // Intercepta o botão voltar do navegador/mobile e o fechamento da aba
+  useEffect(() => {
+    // Para desktop: avisa sobre alterações não salvas ao fechar a aba
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirtyRef.current) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
+    };
+
+    // Para mobile: intercepta o botão voltar
+    // Adicionamos uma entrada no histórico para que possamos capturar o evento popstate
+    window.history.pushState({ noBackExits: true }, '');
+
+    const handlePopState = () => {
+      if (isSystemClosedRef.current) return;
+
+      // Empurra de volta para manter o usuário na página
+      window.history.pushState({ noBackExits: true }, '');
+
+      // Aciona a lógica de saída
+      if (isDirtyRef.current) {
+        setConfirmModal({
+          isOpen: true,
+          title: 'Sair do Sistema',
+          message: 'Existem alterações que não foram salvas. Deseja realmente sair e descartar as mudanças?',
+          confirmLabel: 'Sair e Descartar',
+          confirmColor: 'bg-orange-600 hover:bg-orange-700',
+          onConfirm: () => {
+            setIsDirty(false);
+            setIsSystemClosed(true);
+            setConfirmModal(prev => ({ ...prev, isOpen: false }));
+          }
+        });
+      } else {
+        setConfirmModal({
+          isOpen: true,
+          title: 'Sair do Sistema',
+          message: 'Deseja realmente encerrar a sessão?',
+          confirmLabel: 'Sair',
+          confirmColor: 'bg-slate-800 hover:bg-slate-700',
+          onConfirm: () => {
+            setIsSystemClosed(true);
+            setConfirmModal(prev => ({ ...prev, isOpen: false }));
+          }
+        });
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
   }, []);
 
   const sendPostRequest = async (action: string, payload: any) => {
