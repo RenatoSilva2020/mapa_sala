@@ -72,6 +72,19 @@ export default function App() {
 
   // History Modal State
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+
+  // Warning for unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -139,9 +152,12 @@ export default function App() {
 
   const sendPostRequest = async (action: string, payload: any) => {
     try {
+      // Usamos text/plain para evitar o erro de CORS (preflight OPTIONS) que o Google Script não suporta bem.
+      // O Google Script receberá o corpo como texto e fará o JSON.parse.
       await fetch(API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        mode: 'no-cors', // Permite o envio sem preflight
+        headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({ action, payload })
       });
     } catch (error) {
@@ -179,6 +195,7 @@ export default function App() {
         } : c
       ));
       sendPostRequest('saveMap', { id: selectedClassId, lastUpdated, historyEntry });
+      setIsDirty(false);
       
       setAlertModal({
         isOpen: true,
@@ -194,6 +211,7 @@ export default function App() {
         } : c
       ));
       sendPostRequest('unlockMap', { id: selectedClassId, historyEntry });
+      setIsDirty(false);
     }
     
     setShowSaveModal(false);
@@ -271,6 +289,7 @@ export default function App() {
         };
         setClasses(classes.map(c => c.id === editingClassId ? updatedClass : c));
         sendPostRequest('editClass', updatedClass);
+        setIsDirty(true);
       } else {
         const newClass = { 
           id: crypto.randomUUID(), 
@@ -283,6 +302,7 @@ export default function App() {
         setClasses([...classes, newClass]);
         setSelectedClassId(newClass.id);
         sendPostRequest('addClass', newClass);
+        setIsDirty(true);
       }
       setShowClassModal(false);
     }
@@ -301,6 +321,7 @@ export default function App() {
         setStudents(students.filter(s => s.classId !== selectedClassId));
         setSelectedClassId(classes.length > 1 ? classes.find(c => c.id !== selectedClassId)?.id || null : null);
         sendPostRequest('deleteClass', { id: selectedClassId });
+        setIsDirty(true);
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
       }
     });
@@ -323,6 +344,7 @@ export default function App() {
       };
       setStudents([...students, newStudent]);
       sendPostRequest('addStudent', { ...newStudent, row: null, col: null });
+      setIsDirty(true);
       setShowStudentModal(false);
     }
   };
@@ -337,6 +359,7 @@ export default function App() {
       onConfirm: () => {
         setStudents(students.filter(s => s.id !== id));
         sendPostRequest('deleteStudent', { id });
+        setIsDirty(true);
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
       }
     });
@@ -392,9 +415,11 @@ export default function App() {
             student1: { id: studentId, row, col },
             student2: { id: occupiedStudent.id, row: tempRow, col: tempCol }
           });
+          setIsDirty(true);
         } else {
           newStudents[studentIndex] = { ...student, seatId: overId };
           sendPostRequest('updateStudentSeat', { id: studentId, row, col });
+          setIsDirty(true);
         }
       }
       return newStudents;
