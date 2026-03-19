@@ -11,7 +11,7 @@ import { Sidebar } from './components/Sidebar';
 import { ClassData, StudentData } from './types';
 import { StudentCard } from './components/StudentCard';
 
-const API_URL = import.meta.env.VITE_API_URL || "URL_DO_APPS_SCRIPT_AQUI";
+const API_URL = import.meta.env.VITE_API_URL || "https://script.google.com/macros/s/AKfycbw.../exec";
 
 export default function App() {
   const [classes, setClasses] = useState<ClassData[]>([]);
