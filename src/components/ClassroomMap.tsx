@@ -29,7 +29,7 @@ export function ClassroomMap({
   };
 
   return (
-    <div id="classroom-map-container" className="w-full max-w-[95vw] mx-auto bg-white p-4 sm:p-10 shadow-lg rounded-xl border border-slate-200 print:shadow-none print:border-none print:p-0 print:max-w-none">
+    <div id="classroom-map-container" className="w-full max-w-[95vw] mx-auto bg-white p-4 sm:p-10 shadow-lg rounded-xl border border-slate-200 print:shadow-none print:border-none print:p-0 print:max-w-none print:w-fit print:mx-auto">
       <div className="text-center mb-6 sm:mb-10 print:mb-6">
         <h1 className="text-lg sm:text-2xl font-bold uppercase mb-2 sm:mb-3 text-slate-800 print:text-black print:text-xl">
           MAPEAMENTO DE SALA – TURMA: {currentClass.name}
@@ -53,8 +53,8 @@ export function ClassroomMap({
         </div>
       </div>
 
-      <div className="overflow-x-auto pb-12 -mx-2 px-2 sm:mx-0 sm:px-0 print:overflow-visible print:pb-0 flex justify-start min-h-[500px] sm:min-h-0 w-full max-w-full">
-        <div className="min-w-max mx-auto origin-top transition-transform duration-300 sm:scale-100 scale-[0.8] xs:scale-[0.9] sm:mb-0 -mb-[15%] xs:-mb-[5%]">
+      <div className="overflow-x-auto pb-12 -mx-2 px-2 sm:mx-0 sm:px-0 print:overflow-visible print:pb-0 flex justify-start print:justify-center min-h-[500px] sm:min-h-0 w-full max-w-full">
+        <div className="min-w-max mx-auto origin-top transition-transform duration-300 sm:scale-100 scale-[0.8] xs:scale-[0.9] sm:mb-0 -mb-[15%] xs:-mb-[5%] print:scale-100 print:mb-0">
           <div 
             className="grid gap-x-2 sm:gap-x-8 md:gap-x-16 gap-y-6 sm:gap-y-10 justify-items-center print:min-w-0 print:w-full print:gap-x-2 print:gap-y-6"
             style={{ 

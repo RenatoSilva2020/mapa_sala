@@ -22,6 +22,7 @@ export default function App() {
   const [activeStudent, setActiveStudent] = useState<StudentData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
@@ -202,37 +203,70 @@ export default function App() {
     }
   };
 
-  const confirmSaveMap = (e: React.FormEvent) => {
+  const confirmSaveMap = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!teacherName.trim() || !selectedClassId) return;
 
-    const now = new Date();
-    const lastUpdated = now.toISOString();
-    const historyEntry: HistoryEntry = {
-      id: crypto.randomUUID(),
-      date: lastUpdated,
-      teacherName: teacherName.trim(),
-      action: 'save'
-    };
-    
-    setClasses(classes.map(c => 
-      c.id === selectedClassId ? { 
-        ...c, 
-        isLocked: true, 
-        lastUpdated,
-        history: [...(c.history || []), historyEntry]
-      } : c
-    ));
-    sendPostRequest('saveMap', { id: selectedClassId, lastUpdated, historyEntry });
-    setIsDirty(false);
-    
-    setAlertModal({
-      isOpen: true,
-      title: 'Mapa Salvo',
-      message: 'O mapeamento foi salvo e travado com sucesso.'
-    });
-    
-    setShowSaveModal(false);
+    setIsSaving(true);
+    try {
+      const now = new Date();
+      const lastUpdated = now.toISOString();
+      const historyEntry: HistoryEntry = {
+        id: crypto.randomUUID(),
+        date: lastUpdated,
+        teacherName: teacherName.trim(),
+        action: 'save'
+      };
+
+      // Coleta as posições de todos os alunos desta turma para salvar em massa
+      const classStudents = students
+        .filter(s => s.classId === selectedClassId)
+        .map(s => {
+          let row = null;
+          let col = null;
+          if (s.seatId) {
+            const parts = s.seatId.split('-');
+            row = parseInt(parts[1]) + 1;
+            col = parseInt(parts[2]) + 1;
+          }
+          return { id: s.id, row, col };
+        });
+      
+      setClasses(classes.map(c => 
+        c.id === selectedClassId ? { 
+          ...c, 
+          isLocked: true, 
+          lastUpdated,
+          history: [...(c.history || []), historyEntry]
+        } : c
+      ));
+
+      await sendPostRequest('saveMap', { 
+        id: selectedClassId, 
+        lastUpdated, 
+        historyEntry,
+        students: classStudents 
+      });
+      
+      setIsDirty(false);
+      
+      setAlertModal({
+        isOpen: true,
+        title: 'Mapa Salvo',
+        message: 'O mapeamento foi salvo e travado com sucesso.'
+      });
+      
+      setShowSaveModal(false);
+    } catch (error) {
+      console.error("Erro ao salvar:", error);
+      setAlertModal({
+        isOpen: true,
+        title: 'Erro ao Salvar',
+        message: 'Ocorreu um erro ao tentar salvar o mapa. Por favor, tente novamente.'
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleUnlockMap = () => {
@@ -681,7 +715,7 @@ export default function App() {
               />
             </div>
             
-            <div className="flex-1 overflow-auto p-4 sm:p-8 print:p-0 print:overflow-visible bg-slate-100 relative">
+            <div className="flex-1 overflow-auto p-4 sm:p-8 print:p-0 print:overflow-visible bg-slate-100 relative print:flex print:justify-center">
               {/* Floating Button for Mobile Student List */}
               <button 
                 onClick={() => setIsSidebarOpen(true)}
