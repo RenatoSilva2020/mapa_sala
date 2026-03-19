@@ -13,7 +13,7 @@ import { Sidebar } from './components/Sidebar';
 import { ClassData, StudentData, HistoryEntry } from './types';
 import { StudentCard } from './components/StudentCard';
 
-const API_URL = "https://script.google.com/macros/s/AKfycbzaw8GP992s3pX_yshZvYTAABtfUlABqNDA2p8sjkKztiM0-e76O7oNxU5jVDPPsYeZ/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwBR0A-QOWfJdgiKjHdSXJavFgcJmMHpVOWbVKBqBZXtW3tkturTg9nx-srSQGqsTSY/exec";
 
 export default function App() {
   const [classes, setClasses] = useState<ClassData[]>([]);
@@ -153,17 +153,24 @@ export default function App() {
   }, []);
 
   const sendPostRequest = async (action: string, payload: any) => {
+    const body = JSON.stringify({ action, payload });
+    console.log(`[API] Enviando ação "${action}":`, payload);
+    
     try {
-      // Usamos text/plain para evitar o erro de CORS (preflight OPTIONS) que o Google Script não suporta bem.
-      // O Google Script receberá o corpo como texto e fará o JSON.parse.
-      await fetch(API_URL, {
+      // Usamos no-cors para evitar problemas de preflight com o Google Script
+      // O dado será enviado, mas não poderemos ler a resposta (opaque response)
+      const response = await fetch(API_URL, {
         method: 'POST',
-        mode: 'no-cors', // Permite o envio sem preflight
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ action, payload })
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'text/plain',
+        },
+        body: body
       });
+      
+      return response;
     } catch (error) {
-      console.error(`Erro na ação ${action}:`, error);
+      console.error(`[API] Erro na ação "${action}":`, error);
     }
   };
 
@@ -440,45 +447,65 @@ export default function App() {
 
   const moveStudent = (studentId: string, overId: string) => {
     setIsDirty(true);
+    
+    // 1. Primeiro atualizamos o estado local (UI)
+    let studentToUpdate: StudentData | null = null;
+    let occupiedStudentToUpdate: StudentData | null = null;
+    let newRow: number | null = null;
+    let newCol: number | null = null;
+    let oldRow: number | null = null;
+    let oldCol: number | null = null;
+
     setStudents((prev) => {
       const newStudents = [...prev];
       const studentIndex = newStudents.findIndex(s => s.id === studentId);
       if (studentIndex === -1) return prev;
 
       const student = newStudents[studentIndex];
+      studentToUpdate = student;
 
       if (overId === 'sidebar') {
         newStudents[studentIndex] = { ...student, seatId: null };
-        sendPostRequest('updateStudentSeat', { id: studentId, row: null, col: null });
+        newRow = null;
+        newCol = null;
       } else if (overId.startsWith('seat-')) {
         const occupiedIndex = newStudents.findIndex(s => s.seatId === overId && s.classId === student.classId);
         
         const [, rStr, cStr] = overId.split('-');
-        const row = parseInt(rStr) + 1;
-        const col = parseInt(cStr) + 1;
+        newRow = parseInt(rStr) + 1;
+        newCol = parseInt(cStr) + 1;
 
         if (occupiedIndex !== -1 && newStudents[occupiedIndex].id !== studentId) {
           // Swap
           const tempSeat = student.seatId;
           const occupiedStudent = newStudents[occupiedIndex];
+          occupiedStudentToUpdate = occupiedStudent;
           
           newStudents[studentIndex] = { ...student, seatId: overId };
           newStudents[occupiedIndex] = { ...occupiedStudent, seatId: tempSeat };
           
-          const tempRow = tempSeat ? parseInt(tempSeat.split('-')[1]) + 1 : null;
-          const tempCol = tempSeat ? parseInt(tempSeat.split('-')[2]) + 1 : null;
-
-          sendPostRequest('swapStudents', {
-            student1: { id: studentId, row, col },
-            student2: { id: occupiedStudent.id, row: tempRow, col: tempCol }
-          });
+          oldRow = tempSeat ? parseInt(tempSeat.split('-')[1]) + 1 : null;
+          oldCol = tempSeat ? parseInt(tempSeat.split('-')[2]) + 1 : null;
         } else {
           newStudents[studentIndex] = { ...student, seatId: overId };
-          sendPostRequest('updateStudentSeat', { id: studentId, row, col });
         }
       }
       return newStudents;
     });
+
+    // 2. Depois enviamos a requisição para o servidor (fora do setStudents)
+    if (overId === 'sidebar') {
+      sendPostRequest('updateStudentSeat', { id: studentId, row: null, col: null });
+    } else if (overId.startsWith('seat-')) {
+      if (occupiedStudentToUpdate) {
+        sendPostRequest('swapStudents', {
+          student1: { id: studentId, row: newRow, col: newCol },
+          student2: { id: (occupiedStudentToUpdate as StudentData).id, row: oldRow, col: oldCol }
+        });
+      } else {
+        sendPostRequest('updateStudentSeat', { id: studentId, row: newRow, col: newCol });
+      }
+    }
   };
 
   const handleSelectStudent = (studentId: string) => {
