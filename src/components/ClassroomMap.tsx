@@ -9,28 +9,28 @@ interface ClassroomMapProps {
 
 export function ClassroomMap({ students, currentClass, onDeleteStudent }: ClassroomMapProps) {
   return (
-    <div id="classroom-map-container" className="max-w-5xl mx-auto bg-white p-10 shadow-lg rounded-xl border border-slate-200">
-      <div className="text-center mb-10">
-        <h1 className="text-2xl font-bold uppercase mb-3 text-slate-800">
+    <div id="classroom-map-container" className="max-w-5xl mx-auto bg-white p-10 shadow-lg rounded-xl border border-slate-200 print:shadow-none print:border-none print:p-0 print:max-w-none">
+      <div className="text-center mb-10 print:mb-6">
+        <h1 className="text-2xl font-bold uppercase mb-3 text-slate-800 print:text-black print:text-xl">
           MAPEAMENTO DE SALA – TURMA: {currentClass.name}
         </h1>
-        <p className="text-slate-600 font-medium max-w-2xl mx-auto">
+        <p className="text-slate-600 font-medium max-w-2xl mx-auto print:text-black print:text-sm">
           O posicionamento de cada estudante deve ser respeitado de acordo com a organização do Mapa de Sala durante todas as aulas!
         </p>
       </div>
 
-      <div className="flex justify-between mb-16 px-4">
-        <div className="w-36 h-20 bg-slate-200 border-2 border-slate-400 flex items-center justify-center text-center font-bold text-sm text-slate-700 shadow-sm">
-          PORTA DA<br/>SALA
-        </div>
-        <div className="w-36 h-20 bg-slate-200 border-2 border-slate-400 flex items-center justify-center text-center font-bold text-sm text-slate-700 shadow-sm">
+      <div className="flex justify-between mb-16 px-4 print:mb-8">
+        <div className="w-36 h-20 bg-slate-200 border-2 border-slate-400 flex items-center justify-center text-center font-bold text-sm text-slate-700 shadow-sm print:border-black print:text-black">
           MESA DO<br/>PROFESSOR
+        </div>
+        <div className="w-36 h-20 bg-slate-200 border-2 border-slate-400 flex items-center justify-center text-center font-bold text-sm text-slate-700 shadow-sm print:border-black print:text-black">
+          PORTA DA<br/>SALA
         </div>
       </div>
 
-      <div className="overflow-x-auto pb-8 -mx-4 px-4 sm:mx-0 sm:px-0">
+      <div className="overflow-x-auto pb-8 -mx-4 px-4 sm:mx-0 sm:px-0 print:overflow-visible print:pb-0">
         <div 
-          className="grid gap-x-4 sm:gap-x-8 md:gap-x-16 gap-y-10 justify-items-center min-w-max mx-auto"
+          className="grid gap-x-4 sm:gap-x-8 md:gap-x-16 gap-y-10 justify-items-center min-w-max mx-auto print:min-w-0 print:w-full print:gap-x-2 print:gap-y-6"
           style={{ gridTemplateColumns: `repeat(${currentClass.cols}, minmax(112px, 1fr))` }}
         >
           {Array.from({ length: currentClass.rows }).map((_, rowIndex) => (

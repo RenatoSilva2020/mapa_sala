@@ -13,7 +13,7 @@ export function Sidebar({ students, onAddStudent, onDeleteStudent }: SidebarProp
   const { isOver, setNodeRef } = useDroppable({ id: 'sidebar' });
 
   return (
-    <div className="w-72 bg-white border-r border-slate-200 flex flex-col h-full shadow-sm z-10">
+    <div className="w-72 bg-white border-r border-slate-200 flex flex-col h-full shadow-sm z-10 print:hidden">
       <div className="p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
         <h2 className="font-bold text-slate-700 flex items-center gap-2">
           Sem Assento 

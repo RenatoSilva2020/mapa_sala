@@ -26,9 +26,9 @@ export function StudentCard({ student }: StudentCardProps) {
       {...attributes}
       className={`w-full h-full min-h-[3rem] bg-white border-2 flex items-center justify-center text-center p-1 cursor-grab active:cursor-grabbing transition-shadow ${
         isDragging ? 'border-blue-500 shadow-lg' : 'border-slate-300 shadow-sm hover:border-blue-400 hover:shadow'
-      }`}
+      } print:border-none print:shadow-none print:p-0 print:bg-transparent`}
     >
-      <span className="text-xs font-semibold break-words line-clamp-3 uppercase text-slate-700 select-none">
+      <span className="text-xs font-semibold break-words line-clamp-3 uppercase text-slate-700 select-none print:text-black print:text-[10px] print:leading-tight">
         {student.name}
       </span>
     </div>

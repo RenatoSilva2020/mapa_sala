@@ -283,81 +283,8 @@ export default function App() {
 
   const currentClass = classes.find(c => c.id === selectedClassId);
 
-  const handleDownloadPDF = async () => {
-    const element = document.getElementById('classroom-map-container');
-    if (!element || !currentClass) return;
-    
-    setIsGeneratingPDF(true);
-    
-    // Save original styles to restore later
-    const originalStyle = element.getAttribute('style') || '';
-    const scrollContainer = element.querySelector('.overflow-x-auto') as HTMLElement;
-    const originalScrollStyle = scrollContainer ? scrollContainer.getAttribute('style') || '' : '';
-    
-    try {
-      // Temporarily adjust styles to ensure full capture without clipping
-      element.style.maxWidth = 'none';
-      element.style.width = 'max-content';
-      if (scrollContainer) {
-        scrollContainer.style.overflow = 'visible';
-        scrollContainer.style.width = 'max-content';
-      }
-
-      // Small delay to allow browser to apply styles
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Create a canvas from the specific element
-      const canvas = await html2canvas(element, { 
-        scale: 2, // Higher resolution
-        backgroundColor: '#ffffff',
-        useCORS: true,
-        logging: false
-      });
-      
-      const imgData = canvas.toDataURL('image/png');
-      
-      // Create PDF in landscape mode
-      const pdf = new jsPDF({
-        orientation: 'landscape',
-        unit: 'mm',
-        format: 'a4'
-      });
-      
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      
-      // Calculate ratio to fit image inside PDF
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-      
-      const finalWidth = imgWidth * ratio;
-      const finalHeight = imgHeight * ratio;
-      
-      // Center the image
-      const x = (pdfWidth - finalWidth) / 2;
-      const y = (pdfHeight - finalHeight) / 2;
-      
-      pdf.addImage(imgData, 'PNG', x, y, finalWidth, finalHeight);
-      
-      // Format filename
-      const fileName = `Mapa_de_Sala_${currentClass.name.replace(/\s+/g, '_')}.pdf`;
-      pdf.save(fileName);
-    } catch (error: any) {
-      console.error('Erro ao gerar PDF:', error);
-      setAlertModal({
-        isOpen: true,
-        title: 'Erro ao gerar PDF',
-        message: `Ocorreu um erro ao processar o mapa: ${error?.message || 'Erro desconhecido'}. Tente novamente.`
-      });
-    } finally {
-      // Restore original styles
-      element.setAttribute('style', originalStyle);
-      if (scrollContainer) {
-        scrollContainer.setAttribute('style', originalScrollStyle);
-      }
-      setIsGeneratingPDF(false);
-    }
+  const handleDownloadPDF = () => {
+    window.print();
   };
 
   const classStudents = students.filter(s => s.classId === selectedClassId);
@@ -376,9 +303,9 @@ export default function App() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-slate-100 font-sans">
+    <div className="h-screen flex flex-col bg-slate-100 font-sans print:h-auto print:bg-white">
       {/* Header */}
-      <header className="bg-white border-b px-6 py-4 flex items-center justify-between shadow-sm z-20">
+      <header className="bg-white border-b px-6 py-4 flex items-center justify-between shadow-sm z-20 print:hidden">
         <div className="flex items-center gap-3">
           <div className="bg-blue-600 p-2 rounded-lg text-white">
             <Users size={24} />
@@ -439,7 +366,7 @@ export default function App() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex overflow-hidden">
+      <main className="flex-1 flex overflow-hidden print:overflow-visible">
         {currentClass ? (
           <DndContext 
             sensors={sensors} 
@@ -452,7 +379,7 @@ export default function App() {
               onAddStudent={requestAddStudent} 
               onDeleteStudent={requestDeleteStudent}
             />
-            <div className="flex-1 overflow-auto p-8">
+            <div className="flex-1 overflow-auto p-8 print:p-0 print:overflow-visible">
               <ClassroomMap 
                 students={seatedStudents} 
                 currentClass={currentClass} 
