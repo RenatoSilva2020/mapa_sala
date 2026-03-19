@@ -5,7 +5,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, useSensor, useSensors, PointerSensor, closestCenter, DragOverlay } from '@dnd-kit/core';
-import { Trash2, Users, Loader2, Edit, Plus } from 'lucide-react';
+import { Trash2, Users, Loader2, Edit, Plus, Download } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import { ClassroomMap } from './components/ClassroomMap';
 import { Sidebar } from './components/Sidebar';
 import { ClassData, StudentData } from './types';
@@ -19,6 +21,7 @@ export default function App() {
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [activeStudent, setActiveStudent] = useState<StudentData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   
   // Class Modal State
   const [showClassModal, setShowClassModal] = useState(false);
@@ -64,12 +67,22 @@ export default function App() {
         }));
         setClasses(formattedClasses);
         
-        const formattedStudents = (data.estudantes || []).map((s: any) => ({
-          id: s.id,
-          name: s.name,
-          classId: s.classId,
-          seatId: s.row && s.col ? `seat-${s.row - 1}-${s.col - 1}` : null
-        }));
+        const formattedStudents = (data.estudantes || []).map((s: any) => {
+          let seatId = null;
+          if (s.row && s.col && s.row !== "(vazio)" && s.col !== "(vazio)") {
+            const r = parseInt(s.row, 10);
+            const c = parseInt(s.col, 10);
+            if (!isNaN(r) && !isNaN(c)) {
+              seatId = `seat-${r - 1}-${c - 1}`;
+            }
+          }
+          return {
+            id: s.id,
+            name: s.name,
+            classId: s.classId,
+            seatId
+          };
+        });
         
         setStudents(formattedStudents);
         
@@ -258,6 +271,80 @@ export default function App() {
   };
 
   const currentClass = classes.find(c => c.id === selectedClassId);
+
+  const handleDownloadPDF = async () => {
+    const element = document.getElementById('classroom-map-container');
+    if (!element || !currentClass) return;
+    
+    setIsGeneratingPDF(true);
+    
+    // Save original styles to restore later
+    const originalStyle = element.getAttribute('style') || '';
+    const scrollContainer = element.querySelector('.overflow-x-auto') as HTMLElement;
+    const originalScrollStyle = scrollContainer ? scrollContainer.getAttribute('style') || '' : '';
+    
+    try {
+      // Temporarily adjust styles to ensure full capture without clipping
+      element.style.maxWidth = 'none';
+      element.style.width = 'max-content';
+      if (scrollContainer) {
+        scrollContainer.style.overflow = 'visible';
+        scrollContainer.style.width = 'max-content';
+      }
+
+      // Small delay to allow browser to apply styles
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Create a canvas from the specific element
+      const canvas = await html2canvas(element, { 
+        scale: 2, // Higher resolution
+        backgroundColor: '#ffffff',
+        useCORS: true,
+        logging: false
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      
+      // Create PDF in landscape mode
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      
+      // Calculate ratio to fit image inside PDF
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      
+      const finalWidth = imgWidth * ratio;
+      const finalHeight = imgHeight * ratio;
+      
+      // Center the image
+      const x = (pdfWidth - finalWidth) / 2;
+      const y = (pdfHeight - finalHeight) / 2;
+      
+      pdf.addImage(imgData, 'PNG', x, y, finalWidth, finalHeight);
+      
+      // Format filename
+      const fileName = `Mapa_de_Sala_${currentClass.name.replace(/\s+/g, '_')}.pdf`;
+      pdf.save(fileName);
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      alert('Ocorreu um erro ao gerar o PDF. Tente novamente.');
+    } finally {
+      // Restore original styles
+      element.setAttribute('style', originalStyle);
+      if (scrollContainer) {
+        scrollContainer.setAttribute('style', originalScrollStyle);
+      }
+      setIsGeneratingPDF(false);
+    }
+  };
+
   const classStudents = students.filter(s => s.classId === selectedClassId);
   const unseatedStudents = classStudents.filter(s => !s.seatId);
   const seatedStudents = classStudents.filter(s => s.seatId);
@@ -309,6 +396,16 @@ export default function App() {
                 title="Excluir Turma"
               >
                 <Trash2 size={20} />
+              </button>
+              <div className="h-6 w-px bg-slate-300 mx-1"></div>
+              <button 
+                onClick={handleDownloadPDF}
+                disabled={isGeneratingPDF}
+                className="text-emerald-600 hover:bg-emerald-50 p-2 rounded-md transition-colors flex items-center gap-2 font-medium text-sm disabled:opacity-50"
+                title="Baixar PDF"
+              >
+                {isGeneratingPDF ? <Loader2 size={20} className="animate-spin" /> : <Download size={20} />}
+                <span className="hidden sm:inline">Baixar PDF</span>
               </button>
             </div>
           ) : (

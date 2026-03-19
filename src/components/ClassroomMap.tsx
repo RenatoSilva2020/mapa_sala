@@ -9,7 +9,7 @@ interface ClassroomMapProps {
 
 export function ClassroomMap({ students, currentClass, onDeleteStudent }: ClassroomMapProps) {
   return (
-    <div className="max-w-5xl mx-auto bg-white p-10 shadow-lg rounded-xl border border-slate-200">
+    <div id="classroom-map-container" className="max-w-5xl mx-auto bg-white p-10 shadow-lg rounded-xl border border-slate-200">
       <div className="text-center mb-10">
         <h1 className="text-2xl font-bold uppercase mb-3 text-slate-800">
           MAPEAMENTO DE SALA – TURMA: {currentClass.name}
@@ -37,10 +37,8 @@ export function ClassroomMap({ students, currentClass, onDeleteStudent }: Classr
             Array.from({ length: currentClass.cols }).map((_, colIndex) => {
               const seatId = `seat-${rowIndex}-${colIndex}`;
               const student = students.find(s => s.seatId === seatId);
-              // Add a visual aisle in the middle of the classroom
-              const isMiddleRow = rowIndex === Math.floor(currentClass.rows / 2) - 1;
               return (
-                <div key={seatId} className={isMiddleRow ? "mb-12" : ""}>
+                <div key={seatId}>
                   <Seat id={seatId} student={student} onDeleteStudent={onDeleteStudent} />
                 </div>
               );
