@@ -584,6 +584,28 @@ export default function App() {
     );
   }
 
+  if (isSystemClosed) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-slate-100">
+        <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center">
+          <div className="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <LogOut size={40} />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-800 mb-2">Sessão Encerrada</h2>
+          <p className="text-slate-600 mb-8">
+            Você saiu do sistema com segurança. Todas as alterações salvas foram preservadas na planilha.
+          </p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-200 flex items-center justify-center gap-2"
+          >
+            Entrar Novamente
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen flex flex-col bg-slate-100 font-sans print:h-auto print:bg-white">
       {/* Header */}
