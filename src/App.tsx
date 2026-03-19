@@ -182,37 +182,25 @@ export default function App() {
       id: crypto.randomUUID(),
       date: lastUpdated,
       teacherName: teacherName.trim(),
-      action: saveActionType
+      action: 'save'
     };
     
-    if (saveActionType === 'save') {
-      setClasses(classes.map(c => 
-        c.id === selectedClassId ? { 
-          ...c, 
-          isLocked: true, 
-          lastUpdated,
-          history: [...(c.history || []), historyEntry]
-        } : c
-      ));
-      sendPostRequest('saveMap', { id: selectedClassId, lastUpdated, historyEntry });
-      setIsDirty(false);
-      
-      setAlertModal({
-        isOpen: true,
-        title: 'Mapa Salvo',
-        message: 'O mapeamento foi salvo e travado com sucesso.'
-      });
-    } else {
-      setClasses(classes.map(c => 
-        c.id === selectedClassId ? { 
-          ...c, 
-          isLocked: false,
-          history: [...(c.history || []), historyEntry]
-        } : c
-      ));
-      sendPostRequest('unlockMap', { id: selectedClassId, historyEntry });
-      setIsDirty(false);
-    }
+    setClasses(classes.map(c => 
+      c.id === selectedClassId ? { 
+        ...c, 
+        isLocked: true, 
+        lastUpdated,
+        history: [...(c.history || []), historyEntry]
+      } : c
+    ));
+    sendPostRequest('saveMap', { id: selectedClassId, lastUpdated, historyEntry });
+    setIsDirty(false);
+    
+    setAlertModal({
+      isOpen: true,
+      title: 'Mapa Salvo',
+      message: 'O mapeamento foi salvo e travado com sucesso.'
+    });
     
     setShowSaveModal(false);
   };
@@ -228,9 +216,13 @@ export default function App() {
       confirmColor: 'bg-blue-600 hover:bg-blue-700',
       onConfirm: () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
-        setSaveActionType('unlock');
-        setTeacherName('');
-        setShowSaveModal(true);
+        
+        // Destrava diretamente sem pedir nome
+        setClasses(classes.map(c => 
+          c.id === selectedClassId ? { ...c, isLocked: false } : c
+        ));
+        sendPostRequest('unlockMap', { id: selectedClassId });
+        setIsDirty(true); // Marca como "com alterações" ao destravar para editar
       }
     });
   };
@@ -957,7 +949,7 @@ export default function App() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
             <h2 className="text-xl font-bold text-slate-800 mb-4">
-              {saveActionType === 'save' ? 'Salvar Mapeamento' : 'Destravar Mapeamento'}
+              Salvar Mapeamento
             </h2>
             <form onSubmit={confirmSaveMap}>
               <div>
@@ -982,11 +974,9 @@ export default function App() {
                 </button>
                 <button 
                   type="submit"
-                  className={`px-4 py-2 text-white rounded-md font-medium transition-colors ${
-                    saveActionType === 'save' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-amber-600 hover:bg-amber-700'
-                  }`}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium transition-colors"
                 >
-                  Confirmar
+                  Confirmar e Salvar
                 </button>
               </div>
             </form>
