@@ -5,13 +5,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, useSensor, useSensors, PointerSensor, closestCenter, DragOverlay } from '@dnd-kit/core';
-import { Trash2, Users, Loader2 } from 'lucide-react';
+import { Trash2, Users, Loader2, Edit, Plus } from 'lucide-react';
 import { ClassroomMap } from './components/ClassroomMap';
 import { Sidebar } from './components/Sidebar';
 import { ClassData, StudentData } from './types';
 import { StudentCard } from './components/StudentCard';
 
-const API_URL = import.meta.env.VITE_API_URL || "https://script.google.com/macros/s/AKfycbw.../exec";
+const API_URL = import.meta.env.VITE_API_URL || "https://script.google.com/macros/s/AKfycbzaw8GP992s3pX_yshZvYTAABtfUlABqNDA2p8sjkKztiM0-e76O7oNxU5jVDPPsYeZ/exec";
 
 export default function App() {
   const [classes, setClasses] = useState<ClassData[]>([]);
@@ -20,10 +20,29 @@ export default function App() {
   const [activeStudent, setActiveStudent] = useState<StudentData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
+  // Class Modal State
   const [showClassModal, setShowClassModal] = useState(false);
+  const [editingClassId, setEditingClassId] = useState<string | null>(null);
   const [newClassName, setNewClassName] = useState('');
   const [newClassRows, setNewClassRows] = useState(6);
   const [newClassCols, setNewClassCols] = useState(6);
+
+  // Student Modal State
+  const [showStudentModal, setShowStudentModal] = useState(false);
+  const [newStudentName, setNewStudentName] = useState('');
+
+  // Confirm Modal State
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -71,7 +90,6 @@ export default function App() {
     try {
       await fetch(API_URL, {
         method: 'POST',
-        // text/plain evita requisições preflight (OPTIONS) que o Apps Script não lida bem por padrão
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ action, payload })
       });
@@ -88,55 +106,100 @@ export default function App() {
     })
   );
 
-  const handleAddClassSubmit = (e: React.FormEvent) => {
+  const openAddClassModal = () => {
+    setEditingClassId(null);
+    setNewClassName('');
+    setNewClassRows(6);
+    setNewClassCols(6);
+    setShowClassModal(true);
+  };
+
+  const openEditClassModal = () => {
+    const current = classes.find(c => c.id === selectedClassId);
+    if (current) {
+      setEditingClassId(current.id);
+      setNewClassName(current.name);
+      setNewClassRows(current.rows);
+      setNewClassCols(current.cols);
+      setShowClassModal(true);
+    }
+  };
+
+  const handleClassSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (newClassName.trim()) {
-      const newClass = { 
-        id: crypto.randomUUID(), 
-        name: newClassName.trim(),
-        rows: newClassRows,
-        cols: newClassCols
-      };
-      setClasses([...classes, newClass]);
-      setSelectedClassId(newClass.id);
-      sendPostRequest('addClass', newClass);
+      if (editingClassId) {
+        const updatedClass = {
+          id: editingClassId,
+          name: newClassName.trim(),
+          rows: newClassRows,
+          cols: newClassCols
+        };
+        setClasses(classes.map(c => c.id === editingClassId ? updatedClass : c));
+        sendPostRequest('editClass', updatedClass);
+      } else {
+        const newClass = { 
+          id: crypto.randomUUID(), 
+          name: newClassName.trim(),
+          rows: newClassRows,
+          cols: newClassCols
+        };
+        setClasses([...classes, newClass]);
+        setSelectedClassId(newClass.id);
+        sendPostRequest('addClass', newClass);
+      }
       setShowClassModal(false);
-      setNewClassName('');
-      setNewClassRows(6);
-      setNewClassCols(6);
     }
   };
 
-  const handleDeleteClass = () => {
+  const requestDeleteClass = () => {
     if (!selectedClassId) return;
-    if (confirm('Tem certeza que deseja excluir esta turma e todos os seus alunos?')) {
-      setClasses(classes.filter(c => c.id !== selectedClassId));
-      setStudents(students.filter(s => s.classId !== selectedClassId));
-      setSelectedClassId(classes.length > 1 ? classes.find(c => c.id !== selectedClassId)?.id || null : null);
-      sendPostRequest('deleteClass', { id: selectedClassId });
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Excluir Turma',
+      message: 'Tem certeza que deseja excluir esta turma e todos os seus alunos? Esta ação não pode ser desfeita.',
+      onConfirm: () => {
+        setClasses(classes.filter(c => c.id !== selectedClassId));
+        setStudents(students.filter(s => s.classId !== selectedClassId));
+        setSelectedClassId(classes.length > 1 ? classes.find(c => c.id !== selectedClassId)?.id || null : null);
+        sendPostRequest('deleteClass', { id: selectedClassId });
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+      }
+    });
   };
 
-  const handleAddStudent = () => {
+  const requestAddStudent = () => {
     if (!selectedClassId) return;
-    const name = prompt('Nome do aluno:');
-    if (name?.trim()) {
+    setNewStudentName('');
+    setShowStudentModal(true);
+  };
+
+  const handleAddStudentSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newStudentName.trim() && selectedClassId) {
       const newStudent = {
         id: crypto.randomUUID(),
         classId: selectedClassId,
-        name: name.trim(),
+        name: newStudentName.trim(),
         seatId: null,
       };
       setStudents([...students, newStudent]);
       sendPostRequest('addStudent', { ...newStudent, row: null, col: null });
+      setShowStudentModal(false);
     }
   };
 
-  const handleDeleteStudent = (id: string) => {
-    if (confirm('Excluir este aluno?')) {
-      setStudents(students.filter(s => s.id !== id));
-      sendPostRequest('deleteStudent', { id });
-    }
+  const requestDeleteStudent = (id: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Excluir Aluno',
+      message: 'Tem certeza que deseja excluir este aluno? Esta ação não pode ser desfeita.',
+      onConfirm: () => {
+        setStudents(students.filter(s => s.id !== id));
+        sendPostRequest('deleteStudent', { id });
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+      }
+    });
   };
 
   const handleDragStart = (event: any) => {
@@ -234,7 +297,14 @@ export default function App() {
                 ))}
               </select>
               <button 
-                onClick={handleDeleteClass}
+                onClick={openEditClassModal}
+                className="text-slate-500 hover:bg-slate-100 p-2 rounded-md transition-colors"
+                title="Editar Turma"
+              >
+                <Edit size={20} />
+              </button>
+              <button 
+                onClick={requestDeleteClass}
                 className="text-red-500 hover:bg-red-50 p-2 rounded-md transition-colors"
                 title="Excluir Turma"
               >
@@ -248,10 +318,10 @@ export default function App() {
           <div className="h-8 w-px bg-slate-200 mx-2"></div>
           
           <button 
-            onClick={() => setShowClassModal(true)}
-            className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+            onClick={openAddClassModal}
+            className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2"
           >
-            Nova Turma
+            <Plus size={16} /> Nova Turma
           </button>
         </div>
       </header>
@@ -267,14 +337,14 @@ export default function App() {
           >
             <Sidebar 
               students={unseatedStudents} 
-              onAddStudent={handleAddStudent} 
-              onDeleteStudent={handleDeleteStudent}
+              onAddStudent={requestAddStudent} 
+              onDeleteStudent={requestDeleteStudent}
             />
             <div className="flex-1 overflow-auto p-8">
               <ClassroomMap 
                 students={seatedStudents} 
                 currentClass={currentClass} 
-                onDeleteStudent={handleDeleteStudent}
+                onDeleteStudent={requestDeleteStudent}
               />
             </div>
             <DragOverlay>
@@ -291,27 +361,30 @@ export default function App() {
             <h2 className="text-xl font-semibold mb-2">Nenhuma turma selecionada</h2>
             <p>Crie uma nova turma para começar a organizar os assentos.</p>
             <button 
-              onClick={() => setShowClassModal(true)}
-              className="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-medium transition-colors"
+              onClick={openAddClassModal}
+              className="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-medium transition-colors flex items-center gap-2"
             >
-              Criar Primeira Turma
+              <Plus size={20} /> Criar Primeira Turma
             </button>
           </div>
         )}
       </main>
 
-      {/* Modal de Nova Turma */}
+      {/* Modal de Turma (Criar/Editar) */}
       {showClassModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-            <h2 className="text-xl font-bold text-slate-800 mb-4">Criar Nova Turma</h2>
-            <form onSubmit={handleAddClassSubmit}>
+            <h2 className="text-xl font-bold text-slate-800 mb-4">
+              {editingClassId ? 'Editar Turma' : 'Criar Nova Turma'}
+            </h2>
+            <form onSubmit={handleClassSubmit}>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Nome da Turma</label>
                   <input 
                     type="text" 
                     required
+                    autoFocus
                     value={newClassName}
                     onChange={e => setNewClassName(e.target.value)}
                     className="w-full border border-slate-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
@@ -353,10 +426,72 @@ export default function App() {
                   type="submit"
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium transition-colors"
                 >
-                  Criar Turma
+                  {editingClassId ? 'Salvar Alterações' : 'Criar Turma'}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Novo Aluno */}
+      {showStudentModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+            <h2 className="text-xl font-bold text-slate-800 mb-4">Adicionar Aluno</h2>
+            <form onSubmit={handleAddStudentSubmit}>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Nome do Aluno</label>
+                <input 
+                  type="text" 
+                  required
+                  autoFocus
+                  value={newStudentName}
+                  onChange={e => setNewStudentName(e.target.value)}
+                  className="w-full border border-slate-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Ex: João Silva"
+                />
+              </div>
+              <div className="mt-6 flex justify-end gap-3">
+                <button 
+                  type="button"
+                  onClick={() => setShowStudentModal(false)}
+                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-md font-medium transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium transition-colors"
+                >
+                  Adicionar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação (Exclusão) */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+            <h2 className="text-xl font-bold text-slate-800 mb-2">{confirmModal.title}</h2>
+            <p className="text-slate-600 mb-6">{confirmModal.message}</p>
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-md font-medium transition-colors"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={confirmModal.onConfirm}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md font-medium transition-colors"
+              >
+                Excluir
+              </button>
+            </div>
           </div>
         </div>
       )}
