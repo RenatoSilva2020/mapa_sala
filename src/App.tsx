@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, useSensor, useSensors, PointerSensor, TouchSensor, closestCenter, DragOverlay } from '@dnd-kit/core';
-import { Trash2, Users, Loader2, Edit, Plus, Download, Menu, X as CloseIcon, DoorOpen, Monitor, Lock, Unlock, Save, History } from 'lucide-react';
+import { Trash2, Users, Loader2, Edit, Plus, Download, Menu, X as CloseIcon, DoorOpen, Monitor, Lock, Unlock, Save, History, LogOut } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { ClassroomMap } from './components/ClassroomMap';
@@ -73,8 +73,9 @@ export default function App() {
   // History Modal State
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  const [isSystemClosed, setIsSystemClosed] = useState(false);
 
-  // Warning for unsaved changes
+  // Warning for unsaved changes (Browser Tab Close)
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (isDirty) {
@@ -167,9 +168,38 @@ export default function App() {
 
   const handleSaveMap = () => {
     if (!selectedClassId) return;
-    setSaveActionType('save');
+    
+    // Verifica se há alunos não posicionados
+    if (unseatedStudents.length > 0) {
+      setAlertModal({
+        isOpen: true,
+        title: 'Atenção',
+        message: `Não é possível salvar o mapa com ${unseatedStudents.length} aluno(s) fora das carteiras. Por favor, posicione todos os alunos antes de salvar.`
+      });
+      return;
+    }
+
     setTeacherName('');
     setShowSaveModal(true);
+  };
+
+  const handleExitSystem = () => {
+    if (isDirty) {
+      setConfirmModal({
+        isOpen: true,
+        title: 'Sair do Sistema',
+        message: 'Existem alterações que não foram salvas. Deseja realmente sair e descartar as mudanças?',
+        confirmLabel: 'Sair e Descartar',
+        confirmColor: 'bg-orange-600 hover:bg-orange-700',
+        onConfirm: () => {
+          setIsDirty(false);
+          setIsSystemClosed(true);
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        }
+      });
+    } else {
+      setIsSystemClosed(true);
+    }
   };
 
   const confirmSaveMap = (e: React.FormEvent) => {
@@ -559,8 +589,12 @@ export default function App() {
               ) : (
                 <button 
                   onClick={handleSaveMap}
-                  className="text-blue-600 hover:bg-blue-50 p-1.5 sm:p-2 rounded-md transition-colors flex items-center gap-1 sm:gap-2 font-medium text-sm"
-                  title="Salvar Mapa"
+                  className={`p-1.5 sm:p-2 rounded-md transition-colors flex items-center gap-1 sm:gap-2 font-medium text-sm ${
+                    unseatedStudents.length > 0 
+                      ? 'text-slate-400 bg-slate-100 cursor-not-allowed' 
+                      : 'text-blue-600 hover:bg-blue-50'
+                  }`}
+                  title={unseatedStudents.length > 0 ? "Posicione todos os alunos para salvar" : "Salvar Mapa"}
                 >
                   <Save size={18} className="sm:w-5 sm:h-5" />
                   <span className="hidden md:inline">
@@ -589,6 +623,17 @@ export default function App() {
               >
                 <History size={18} className="sm:w-5 sm:h-5" />
                 <span className="hidden md:inline">Histórico</span>
+              </button>
+
+              <div className="hidden sm:block h-6 w-px bg-slate-300 mx-1"></div>
+              
+              <button 
+                onClick={handleExitSystem}
+                className="text-slate-500 hover:bg-red-50 hover:text-red-600 p-1.5 sm:p-2 rounded-md transition-colors flex items-center gap-1 sm:gap-2 font-medium text-sm"
+                title="Sair do Sistema"
+              >
+                <LogOut size={18} className="sm:w-5 sm:h-5" />
+                <span className="hidden md:inline">Sair</span>
               </button>
             </div>
           ) : (
