@@ -8,22 +8,36 @@ interface SeatProps {
   id: string;
   student?: StudentData;
   onDeleteStudent: (id: string) => void;
+  isSelected: boolean;
+  onSelect: () => void;
+  onSelectStudent: (id: string) => void;
 }
 
-export function Seat({ id, student, onDeleteStudent }: SeatProps) {
+export function Seat({ id, student, onDeleteStudent, isSelected, onSelect, onSelectStudent }: SeatProps) {
   const { isOver, setNodeRef } = useDroppable({ id });
 
   return (
     <div className="flex flex-col items-center">
       <div 
         ref={setNodeRef}
-        className={`relative w-28 h-20 border-2 flex items-center justify-center p-1 transition-colors ${
+        onClick={onSelect}
+        className={`relative w-24 h-16 sm:w-28 sm:h-20 border-2 flex items-center justify-center p-1 transition-all cursor-pointer ${
+          isSelected ? 'ring-4 ring-blue-500 ring-offset-2 rounded-lg scale-95 z-20' : ''
+        } ${
           isOver ? 'bg-blue-50 border-blue-400' : 'bg-white border-slate-400'
         } print:border-black print:bg-white`}
       >
         {student ? (
           <div className="w-full h-full group relative">
-            <StudentCard student={student} />
+            <div 
+              className="w-full h-full"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectStudent(student.id);
+              }}
+            >
+              <StudentCard student={student} />
+            </div>
             <button 
               onClick={(e) => {
                 e.stopPropagation();
@@ -42,7 +56,7 @@ export function Seat({ id, student, onDeleteStudent }: SeatProps) {
         )}
       </div>
       {/* Chair drawing */}
-      <div className="w-16 h-3 border-b-2 border-l-2 border-r-2 border-slate-400 mt-1 print:border-black"></div>
+      <div className={`w-16 h-3 border-b-2 border-l-2 border-r-2 border-slate-400 mt-1 print:border-black transition-colors ${isSelected ? 'border-blue-500' : ''}`}></div>
     </div>
   );
 }

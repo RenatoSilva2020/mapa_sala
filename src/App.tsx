@@ -23,6 +23,8 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
   
   // Class Modal State
   const [showClassModal, setShowClassModal] = useState(false);
@@ -259,6 +261,10 @@ export default function App() {
     const studentId = active.id as string;
     const overId = over.id as string;
 
+    moveStudent(studentId, overId);
+  };
+
+  const moveStudent = (studentId: string, overId: string) => {
     setStudents((prev) => {
       const newStudents = [...prev];
       const studentIndex = newStudents.findIndex(s => s.id === studentId);
@@ -300,6 +306,49 @@ export default function App() {
     });
   };
 
+  const handleSelectStudent = (studentId: string) => {
+    if (selectedSeatId) {
+      // Move student to the selected seat
+      moveStudent(studentId, selectedSeatId);
+      setSelectedSeatId(null);
+      setSelectedStudentId(null);
+    } else {
+      setSelectedStudentId(selectedStudentId === studentId ? null : studentId);
+      setSelectedSeatId(null);
+      // Close sidebar on mobile after selection
+      if (window.innerWidth < 640) {
+        setIsSidebarOpen(false);
+      }
+    }
+  };
+
+  const handleSelectSeat = (seatId: string) => {
+    if (selectedStudentId) {
+      // Move selected student to this seat
+      moveStudent(selectedStudentId, seatId);
+      setSelectedStudentId(null);
+      setSelectedSeatId(null);
+    } else if (selectedSeatId) {
+      if (selectedSeatId === seatId) {
+        setSelectedSeatId(null);
+      } else {
+        // Swap students between seats
+        const student1 = students.find(s => s.seatId === selectedSeatId && s.classId === selectedClassId);
+        const student2 = students.find(s => s.seatId === seatId && s.classId === selectedClassId);
+        
+        if (student1) {
+          moveStudent(student1.id, seatId);
+        } else if (student2) {
+          moveStudent(student2.id, selectedSeatId);
+        }
+        setSelectedSeatId(null);
+      }
+    } else {
+      setSelectedSeatId(seatId);
+      setSelectedStudentId(null);
+    }
+  };
+
   const currentClass = classes.find(c => c.id === selectedClassId);
 
   const handleDownloadPDF = () => {
@@ -328,9 +377,18 @@ export default function App() {
         <div className="flex items-center gap-2 sm:gap-3">
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="sm:hidden p-2 hover:bg-slate-100 rounded-md text-slate-600"
+            className="sm:hidden p-2 hover:bg-slate-100 rounded-md text-slate-600 relative"
           >
-            {isSidebarOpen ? <CloseIcon size={24} /> : <Menu size={24} />}
+            {isSidebarOpen ? <CloseIcon size={24} /> : (
+              <>
+                <Menu size={24} />
+                {unseatedStudents.length > 0 && (
+                  <span className="absolute top-1 right-1 bg-red-500 text-white text-[8px] font-bold px-1 rounded-full ring-1 ring-white">
+                    {unseatedStudents.length}
+                  </span>
+                )}
+              </>
+            )}
           </button>
           <div className="bg-blue-600 p-1.5 sm:p-2 rounded-lg text-white">
             <Users size={20} className="sm:w-6 sm:h-6" />
@@ -413,20 +471,55 @@ export default function App() {
                 students={unseatedStudents} 
                 onAddStudent={requestAddStudent} 
                 onDeleteStudent={requestDeleteStudent}
+                selectedStudentId={selectedStudentId}
+                onSelectStudent={handleSelectStudent}
+                onClose={() => setIsSidebarOpen(false)}
               />
-              <button 
-                onClick={() => setIsSidebarOpen(false)}
-                className="sm:hidden absolute top-4 -right-12 bg-white p-2 rounded-r-md shadow-md text-slate-600"
-              >
-                <CloseIcon size={24} />
-              </button>
             </div>
             
-            <div className="flex-1 overflow-auto p-4 sm:p-8 print:p-0 print:overflow-visible bg-slate-100">
+            <div className="flex-1 overflow-auto p-4 sm:p-8 print:p-0 print:overflow-visible bg-slate-100 relative">
+              {/* Floating Button for Mobile Student List */}
+              <button 
+                onClick={() => setIsSidebarOpen(true)}
+                className={`sm:hidden fixed bottom-6 right-6 z-30 p-4 rounded-full shadow-2xl transition-all ${
+                  selectedStudentId ? 'bg-blue-600 text-white scale-110' : 'bg-white text-slate-700'
+                }`}
+              >
+                <div className="relative">
+                  <Users size={24} />
+                  {unseatedStudents.length > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full ring-2 ring-white">
+                      {unseatedStudents.length}
+                    </span>
+                  )}
+                </div>
+              </button>
+
+              {/* Selection Status Bar */}
+              {(selectedStudentId || selectedSeatId) && (
+                <div className="fixed top-20 left-1/2 -translate-x-1/2 z-40 bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-3 animate-bounce">
+                  <span className="text-sm font-medium">
+                    {selectedStudentId ? 'Selecione um lugar no mapa' : 'Selecione um aluno na lista'}
+                  </span>
+                  <button 
+                    onClick={() => {
+                      setSelectedStudentId(null);
+                      setSelectedSeatId(null);
+                    }}
+                    className="bg-white/20 hover:bg-white/30 rounded-full p-1"
+                  >
+                    <CloseIcon size={14} />
+                  </button>
+                </div>
+              )}
+
               <ClassroomMap 
                 students={seatedStudents} 
                 currentClass={currentClass} 
                 onDeleteStudent={requestDeleteStudent}
+                selectedSeatId={selectedSeatId}
+                onSelectSeat={handleSelectSeat}
+                onSelectStudent={handleSelectStudent}
               />
             </div>
             <DragOverlay>
