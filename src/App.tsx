@@ -44,6 +44,8 @@ export default function App() {
     isOpen: boolean;
     title: string;
     message: string;
+    confirmLabel?: string;
+    confirmColor?: string;
     onConfirm: () => void;
   }>({
     isOpen: false,
@@ -77,19 +79,6 @@ export default function App() {
         const response = await fetch(API_URL);
         const data = await response.json();
 
-        const formattedClasses = (data.turmas || []).map((t: any) => ({
-          id: t.id,
-          name: t.name,
-          rows: t.rows || 6,
-          cols: t.cols || 6,
-          doorPosition: t.doorPosition || 'right',
-          deskPosition: t.deskPosition || 'left',
-          isLocked: t.isLocked || false,
-          lastUpdated: t.lastUpdated || null,
-          history: t.history || []
-        }));
-        setClasses(formattedClasses);
-        
         const formattedStudents = (data.estudantes || []).map((s: any) => {
           let seatId = null;
           if (s.row && s.col && s.row !== "(vazio)" && s.col !== "(vazio)") {
@@ -106,7 +95,34 @@ export default function App() {
             seatId
           };
         });
-        
+
+        const formattedClasses = (data.turmas || []).map((t: any) => {
+          // Auto-lock if there are seated students in this class
+          const hasSeatedStudents = formattedStudents.some(s => s.classId === t.id && s.seatId !== null);
+          
+          // Filter history for this class if history comes as a separate array
+          const classHistory = (data.historico || [])
+            .filter((h: any) => h.classId === t.id)
+            .map((h: any) => ({
+              id: h.id,
+              date: h.date,
+              teacherName: h.teacherName,
+              action: h.action
+            }));
+
+          return {
+            id: t.id,
+            name: t.name,
+            rows: t.rows || 6,
+            cols: t.cols || 6,
+            doorPosition: t.doorPosition || 'right',
+            deskPosition: t.deskPosition || 'left',
+            isLocked: hasSeatedStudents ? true : (t.isLocked || false),
+            lastUpdated: t.lastUpdated || null,
+            history: classHistory.length > 0 ? classHistory : (t.history || [])
+          };
+        });
+        setClasses(formattedClasses);
         setStudents(formattedStudents);
         
         if (data.turmas && data.turmas.length > 0) {
@@ -190,6 +206,8 @@ export default function App() {
       isOpen: true,
       title: 'Editar Mapa',
       message: 'Deseja realmente editar o mapa? Isso irá destravar as alterações.',
+      confirmLabel: 'Editar',
+      confirmColor: 'bg-blue-600 hover:bg-blue-700',
       onConfirm: () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
         setSaveActionType('unlock');
@@ -276,6 +294,8 @@ export default function App() {
       isOpen: true,
       title: 'Excluir Turma',
       message: 'Tem certeza que deseja excluir esta turma e todos os seus alunos? Esta ação não pode ser desfeita.',
+      confirmLabel: 'Excluir',
+      confirmColor: 'bg-red-600 hover:bg-red-700',
       onConfirm: () => {
         setClasses(classes.filter(c => c.id !== selectedClassId));
         setStudents(students.filter(s => s.classId !== selectedClassId));
@@ -312,6 +332,8 @@ export default function App() {
       isOpen: true,
       title: 'Excluir Aluno',
       message: 'Tem certeza que deseja excluir este aluno? Esta ação não pode ser desfeita.',
+      confirmLabel: 'Excluir',
+      confirmColor: 'bg-red-600 hover:bg-red-700',
       onConfirm: () => {
         setStudents(students.filter(s => s.id !== id));
         sendPostRequest('deleteStudent', { id });
@@ -877,9 +899,9 @@ export default function App() {
               </button>
               <button 
                 onClick={confirmModal.onConfirm}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md font-medium transition-colors"
+                className={`px-4 py-2 text-white rounded-md font-medium transition-colors ${confirmModal.confirmColor || 'bg-red-600 hover:bg-red-700'}`}
               >
-                Excluir
+                {confirmModal.confirmLabel || 'Excluir'}
               </button>
             </div>
           </div>
