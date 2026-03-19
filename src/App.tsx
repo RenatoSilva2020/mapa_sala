@@ -5,15 +5,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, useSensor, useSensors, PointerSensor, TouchSensor, closestCenter, DragOverlay } from '@dnd-kit/core';
-import { Trash2, Users, Loader2, Edit, Plus, Download, Menu, X as CloseIcon, DoorOpen, Monitor, Lock, Unlock, Save } from 'lucide-react';
+import { Trash2, Users, Loader2, Edit, Plus, Download, Menu, X as CloseIcon, DoorOpen, Monitor, Lock, Unlock, Save, History } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { ClassroomMap } from './components/ClassroomMap';
 import { Sidebar } from './components/Sidebar';
-import { ClassData, StudentData } from './types';
+import { ClassData, StudentData, HistoryEntry } from './types';
 import { StudentCard } from './components/StudentCard';
 
-const API_URL = "/api/data";
+const API_URL = "https://script.google.com/macros/s/AKfycbzaw8GP992s3pX_yshZvYTAABtfUlABqNDA2p8sjkKztiM0-e76O7oNxU5jVDPPsYeZ/exec";
 
 export default function App() {
   const [classes, setClasses] = useState<ClassData[]>([]);
@@ -63,6 +63,14 @@ export default function App() {
     message: '',
   });
 
+  // Save Map Modal State
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [teacherName, setTeacherName] = useState('');
+  const [saveActionType, setSaveActionType] = useState<'save' | 'unlock'>('save');
+
+  // History Modal State
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -77,7 +85,8 @@ export default function App() {
           doorPosition: t.doorPosition || 'right',
           deskPosition: t.deskPosition || 'left',
           isLocked: t.isLocked || false,
-          lastUpdated: t.lastUpdated || null
+          lastUpdated: t.lastUpdated || null,
+          history: t.history || []
         }));
         setClasses(formattedClasses);
         
@@ -126,19 +135,52 @@ export default function App() {
 
   const handleSaveMap = () => {
     if (!selectedClassId) return;
+    setSaveActionType('save');
+    setTeacherName('');
+    setShowSaveModal(true);
+  };
+
+  const confirmSaveMap = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!teacherName.trim() || !selectedClassId) return;
+
     const now = new Date();
     const lastUpdated = now.toISOString();
+    const historyEntry: HistoryEntry = {
+      id: crypto.randomUUID(),
+      date: lastUpdated,
+      teacherName: teacherName.trim(),
+      action: saveActionType
+    };
     
-    setClasses(classes.map(c => 
-      c.id === selectedClassId ? { ...c, isLocked: true, lastUpdated } : c
-    ));
-    sendPostRequest('saveMap', { id: selectedClassId, lastUpdated });
+    if (saveActionType === 'save') {
+      setClasses(classes.map(c => 
+        c.id === selectedClassId ? { 
+          ...c, 
+          isLocked: true, 
+          lastUpdated,
+          history: [...(c.history || []), historyEntry]
+        } : c
+      ));
+      sendPostRequest('saveMap', { id: selectedClassId, lastUpdated, historyEntry });
+      
+      setAlertModal({
+        isOpen: true,
+        title: 'Mapa Salvo',
+        message: 'O mapeamento foi salvo e travado com sucesso.'
+      });
+    } else {
+      setClasses(classes.map(c => 
+        c.id === selectedClassId ? { 
+          ...c, 
+          isLocked: false,
+          history: [...(c.history || []), historyEntry]
+        } : c
+      ));
+      sendPostRequest('unlockMap', { id: selectedClassId, historyEntry });
+    }
     
-    setAlertModal({
-      isOpen: true,
-      title: 'Mapa Salvo',
-      message: 'O mapeamento foi salvo e travado com sucesso.'
-    });
+    setShowSaveModal(false);
   };
 
   const handleUnlockMap = () => {
@@ -149,11 +191,10 @@ export default function App() {
       title: 'Editar Mapa',
       message: 'Deseja realmente editar o mapa? Isso irá destravar as alterações.',
       onConfirm: () => {
-        setClasses(classes.map(c => 
-          c.id === selectedClassId ? { ...c, isLocked: false } : c
-        ));
-        sendPostRequest('unlockMap', { id: selectedClassId });
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        setSaveActionType('unlock');
+        setTeacherName('');
+        setShowSaveModal(true);
       }
     });
   };
@@ -497,6 +538,17 @@ export default function App() {
               >
                 {isGeneratingPDF ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} className="sm:w-5 sm:h-5" />}
                 <span className="hidden md:inline">Baixar PDF</span>
+              </button>
+
+              <div className="hidden sm:block h-6 w-px bg-slate-300 mx-1"></div>
+              
+              <button 
+                onClick={() => setShowHistoryModal(true)}
+                className="text-slate-600 hover:bg-slate-100 p-1.5 sm:p-2 rounded-md transition-colors flex items-center gap-1 sm:gap-2 font-medium text-sm"
+                title="Ver Histórico"
+              >
+                <History size={18} className="sm:w-5 sm:h-5" />
+                <span className="hidden md:inline">Histórico</span>
               </button>
             </div>
           ) : (
@@ -846,6 +898,98 @@ export default function App() {
                 className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md font-medium transition-colors"
               >
                 OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Salvar Mapa (Nome do Professor) */}
+      {showSaveModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+            <h2 className="text-xl font-bold text-slate-800 mb-4">
+              {saveActionType === 'save' ? 'Salvar Mapeamento' : 'Destravar Mapeamento'}
+            </h2>
+            <form onSubmit={confirmSaveMap}>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Nome do Professor Responsável</label>
+                <input 
+                  type="text" 
+                  required
+                  autoFocus
+                  value={teacherName}
+                  onChange={e => setTeacherName(e.target.value)}
+                  className="w-full border border-slate-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Seu nome completo"
+                />
+              </div>
+              <div className="mt-6 flex justify-end gap-3">
+                <button 
+                  type="button"
+                  onClick={() => setShowSaveModal(false)}
+                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-md font-medium transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit"
+                  className={`px-4 py-2 text-white rounded-md font-medium transition-colors ${
+                    saveActionType === 'save' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-amber-600 hover:bg-amber-700'
+                  }`}
+                >
+                  Confirmar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Histórico */}
+      {showHistoryModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 max-h-[80vh] flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-slate-800">Histórico de Alterações</h2>
+              <button onClick={() => setShowHistoryModal(false)} className="text-slate-500 hover:text-slate-700">
+                <CloseIcon size={24} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto">
+              {currentClass?.history && currentClass.history.length > 0 ? (
+                <div className="space-y-4">
+                  {[...currentClass.history].reverse().map((entry) => (
+                    <div key={entry.id} className="border-l-4 border-blue-500 pl-4 py-2 bg-slate-50 rounded-r-lg">
+                      <div className="flex justify-between items-start">
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                          entry.action === 'save' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          {entry.action === 'save' ? 'SALVO' : 'DESTRAVADO'}
+                        </span>
+                        <span className="text-xs text-slate-500">
+                          {new Date(entry.date).toLocaleString('pt-BR')}
+                        </span>
+                      </div>
+                      <p className="text-sm text-slate-700 mt-1">
+                        Responsável: <span className="font-semibold">{entry.teacherName}</span>
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-10 text-slate-500">
+                  <History size={48} className="mx-auto mb-2 opacity-20" />
+                  <p>Nenhum histórico registrado para esta turma.</p>
+                </div>
+              )}
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button 
+                onClick={() => setShowHistoryModal(false)}
+                className="px-4 py-2 bg-slate-800 text-white rounded-md font-medium hover:bg-slate-700 transition-colors"
+              >
+                Fechar
               </button>
             </div>
           </div>

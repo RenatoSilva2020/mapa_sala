@@ -62,12 +62,21 @@ async function startServer() {
           break;
         case "saveMap":
           data.turmas = data.turmas.map((t: any) => 
-            t.id === payload.id ? { ...t, isLocked: true, lastUpdated: payload.lastUpdated } : t
+            t.id === payload.id ? { 
+              ...t, 
+              isLocked: true, 
+              lastUpdated: payload.lastUpdated,
+              history: [...(t.history || []), payload.historyEntry]
+            } : t
           );
           break;
         case "unlockMap":
           data.turmas = data.turmas.map((t: any) => 
-            t.id === payload.id ? { ...t, isLocked: false } : t
+            t.id === payload.id ? { 
+              ...t, 
+              isLocked: false,
+              history: [...(t.history || []), payload.historyEntry]
+            } : t
           );
           break;
       }

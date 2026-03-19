@@ -1,3 +1,10 @@
+export type HistoryEntry = {
+  id: string;
+  date: string;
+  teacherName: string;
+  action: 'save' | 'unlock';
+};
+
 export type ClassData = {
   id: string;
   name: string;
@@ -7,6 +14,7 @@ export type ClassData = {
   deskPosition?: 'left' | 'right';
   lastUpdated?: string;
   isLocked?: boolean;
+  history?: HistoryEntry[];
 };
 
 export type StudentData = {
