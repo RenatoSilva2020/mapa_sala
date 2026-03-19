@@ -383,6 +383,7 @@ export default function App() {
   };
 
   const moveStudent = (studentId: string, overId: string) => {
+    setIsDirty(true);
     setStudents((prev) => {
       const newStudents = [...prev];
       const studentIndex = newStudents.findIndex(s => s.id === studentId);
@@ -415,11 +416,9 @@ export default function App() {
             student1: { id: studentId, row, col },
             student2: { id: occupiedStudent.id, row: tempRow, col: tempCol }
           });
-          setIsDirty(true);
         } else {
           newStudents[studentIndex] = { ...student, seatId: overId };
           sendPostRequest('updateStudentSeat', { id: studentId, row, col });
-          setIsDirty(true);
         }
       }
       return newStudents;
@@ -572,7 +571,9 @@ export default function App() {
                   title="Salvar Mapa"
                 >
                   <Save size={18} className="sm:w-5 sm:h-5" />
-                  <span className="hidden md:inline">Salvar Mapa</span>
+                  <span className="hidden md:inline">
+                    Salvar Mapa {isDirty && <span className="ml-1 text-orange-500">●</span>}
+                  </span>
                 </button>
               )}
 
