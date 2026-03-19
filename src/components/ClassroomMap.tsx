@@ -21,10 +21,10 @@ export function ClassroomMap({ students, currentClass, onDeleteStudent }: Classr
 
       <div className="flex justify-between mb-16 px-4">
         <div className="w-36 h-20 bg-slate-200 border-2 border-slate-400 flex items-center justify-center text-center font-bold text-sm text-slate-700 shadow-sm">
-          MESA DO<br/>PROFESSOR
+          PORTA DA<br/>SALA
         </div>
         <div className="w-36 h-20 bg-slate-200 border-2 border-slate-400 flex items-center justify-center text-center font-bold text-sm text-slate-700 shadow-sm">
-          PORTA DA<br/>SALA
+          MESA DO<br/>PROFESSOR
         </div>
       </div>
 

@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, useSensor, useSensors, PointerSensor, closestCenter, DragOverlay } from '@dnd-kit/core';
 import { Trash2, Users, Loader2, Edit, Plus, Download } from 'lucide-react';
 import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import { ClassroomMap } from './components/ClassroomMap';
 import { Sidebar } from './components/Sidebar';
 import { ClassData, StudentData } from './types';
@@ -45,6 +45,17 @@ export default function App() {
     title: '',
     message: '',
     onConfirm: () => {},
+  });
+
+  // Alert Modal State
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
   });
 
   useEffect(() => {
@@ -332,9 +343,13 @@ export default function App() {
       // Format filename
       const fileName = `Mapa_de_Sala_${currentClass.name.replace(/\s+/g, '_')}.pdf`;
       pdf.save(fileName);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao gerar PDF:', error);
-      alert('Ocorreu um erro ao gerar o PDF. Tente novamente.');
+      setAlertModal({
+        isOpen: true,
+        title: 'Erro ao gerar PDF',
+        message: `Ocorreu um erro ao processar o mapa: ${error?.message || 'Erro desconhecido'}. Tente novamente.`
+      });
     } finally {
       // Restore original styles
       element.setAttribute('style', originalStyle);
@@ -587,6 +602,24 @@ export default function App() {
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md font-medium transition-colors"
               >
                 Excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Alerta/Erro */}
+      {alertModal.isOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+            <h2 className="text-xl font-bold text-slate-800 mb-2">{alertModal.title}</h2>
+            <p className="text-slate-600 mb-6">{alertModal.message}</p>
+            <div className="flex justify-end">
+              <button 
+                onClick={() => setAlertModal(prev => ({ ...prev, isOpen: false }))}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md font-medium transition-colors"
+              >
+                OK
               </button>
             </div>
           </div>
