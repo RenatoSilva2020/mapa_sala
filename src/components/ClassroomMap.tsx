@@ -5,25 +5,40 @@ interface ClassroomMapProps {
   students: StudentData[];
   currentClass: ClassData;
   onDeleteStudent: (id: string) => void;
+  onUnseatStudent: (id: string) => void;
   selectedSeatId: string | null;
   onSelectSeat: (id: string) => void;
   onSelectStudent: (id: string) => void;
+  isLocked: boolean;
 }
 
 export function ClassroomMap({ 
   students, 
   currentClass, 
   onDeleteStudent,
+  onUnseatStudent,
   selectedSeatId,
   onSelectSeat,
-  onSelectStudent
+  onSelectStudent,
+  isLocked
 }: ClassroomMapProps) {
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR');
+  };
+
   return (
     <div id="classroom-map-container" className="w-full max-w-[95vw] mx-auto bg-white p-4 sm:p-10 shadow-lg rounded-xl border border-slate-200 print:shadow-none print:border-none print:p-0 print:max-w-none">
       <div className="text-center mb-6 sm:mb-10 print:mb-6">
         <h1 className="text-lg sm:text-2xl font-bold uppercase mb-2 sm:mb-3 text-slate-800 print:text-black print:text-xl">
           MAPEAMENTO DE SALA – TURMA: {currentClass.name}
         </h1>
+        {currentClass.lastUpdated && (
+          <p className="text-xs sm:text-sm text-slate-500 mb-2 print:text-black">
+            Atualizado em: {formatDate(currentClass.lastUpdated)}
+          </p>
+        )}
         <p className="text-[10px] sm:text-base text-slate-600 font-medium max-w-2xl mx-auto print:text-black print:text-sm px-2">
           O posicionamento de cada estudante deve ser respeitado de acordo com a organização do Mapa de Sala durante todas as aulas!
         </p>
@@ -38,8 +53,8 @@ export function ClassroomMap({
         </div>
       </div>
 
-      <div className="overflow-x-auto pb-12 -mx-2 px-2 sm:mx-0 sm:px-0 print:overflow-visible print:pb-0 flex justify-center min-h-[500px] sm:min-h-0 w-full max-w-full">
-        <div className="min-w-max origin-top transition-transform duration-300 sm:scale-100 scale-[0.8] xs:scale-[0.9] sm:mb-0 -mb-[15%] xs:-mb-[5%]">
+      <div className="overflow-x-auto pb-12 -mx-2 px-2 sm:mx-0 sm:px-0 print:overflow-visible print:pb-0 flex justify-start min-h-[500px] sm:min-h-0 w-full max-w-full">
+        <div className="min-w-max mx-auto origin-top transition-transform duration-300 sm:scale-100 scale-[0.8] xs:scale-[0.9] sm:mb-0 -mb-[15%] xs:-mb-[5%]">
           <div 
             className="grid gap-x-2 sm:gap-x-8 md:gap-x-16 gap-y-6 sm:gap-y-10 justify-items-center print:min-w-0 print:w-full print:gap-x-2 print:gap-y-6"
             style={{ 
@@ -57,9 +72,11 @@ export function ClassroomMap({
                     id={seatId} 
                     student={student} 
                     onDeleteStudent={onDeleteStudent} 
+                    onUnseatStudent={onUnseatStudent}
                     isSelected={selectedSeatId === seatId}
-                    onSelect={() => onSelectSeat(seatId)}
+                    onSelect={() => !isLocked && onSelectSeat(seatId)}
                     onSelectStudent={onSelectStudent}
+                    isLocked={isLocked}
                   />
                 </div>
               );

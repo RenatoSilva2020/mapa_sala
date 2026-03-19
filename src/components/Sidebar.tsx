@@ -9,10 +9,11 @@ interface SidebarProps {
   onDeleteStudent: (id: string) => void;
   selectedStudentId: string | null;
   onSelectStudent: (id: string) => void;
+  isLocked: boolean;
 }
 
-export function Sidebar({ students, onAddStudent, onDeleteStudent, selectedStudentId, onSelectStudent, onClose }: SidebarProps & { onClose?: () => void }) {
-  const { isOver, setNodeRef } = useDroppable({ id: 'sidebar' });
+export function Sidebar({ students, onAddStudent, onDeleteStudent, selectedStudentId, onSelectStudent, onClose, isLocked }: SidebarProps & { onClose?: () => void }) {
+  const { isOver, setNodeRef } = useDroppable({ id: 'sidebar', disabled: isLocked });
 
   return (
     <div className="w-full bg-white flex flex-col h-full shadow-sm z-10 print:hidden">
@@ -30,13 +31,15 @@ export function Sidebar({ students, onAddStudent, onDeleteStudent, selectedStude
             </span>
           </h2>
         </div>
-        <button 
-          onClick={onAddStudent} 
-          className="text-blue-600 hover:bg-blue-100 p-1.5 rounded-md transition-colors" 
-          title="Adicionar Aluno"
-        >
-          <Plus size={20} />
-        </button>
+        {!isLocked && (
+          <button 
+            onClick={onAddStudent} 
+            className="text-blue-600 hover:bg-blue-100 p-1.5 rounded-md transition-colors" 
+            title="Adicionar Aluno"
+          >
+            <Plus size={20} />
+          </button>
+        )}
       </div>
       <div 
         ref={setNodeRef}
@@ -45,32 +48,36 @@ export function Sidebar({ students, onAddStudent, onDeleteStudent, selectedStude
         {students.map(student => (
           <div key={student.id} className="relative group h-16">
             <div 
-              onClick={() => onSelectStudent(student.id)}
-              className={`w-full h-full transition-all ${selectedStudentId === student.id ? 'ring-4 ring-blue-500 ring-offset-2 rounded-lg scale-95' : ''}`}
+              onClick={() => !isLocked && onSelectStudent(student.id)}
+              className={`w-full h-full transition-all ${selectedStudentId === student.id ? 'ring-4 ring-blue-500 ring-offset-2 rounded-lg scale-95' : ''} ${isLocked ? 'cursor-default' : ''}`}
             >
-              <StudentCard student={student} />
+              <StudentCard student={student} isLocked={isLocked} />
             </div>
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                onDeleteStudent(student.id);
-              }}
-              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow-sm hover:bg-red-600"
-              title="Remover Aluno"
-            >
-              <X size={12} />
-            </button>
+            {!isLocked && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteStudent(student.id);
+                }}
+                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow-sm hover:bg-red-600"
+                title="Remover Aluno"
+              >
+                <X size={12} />
+              </button>
+            )}
           </div>
         ))}
         {students.length === 0 && (
           <div className="text-center mt-8 text-slate-400 flex flex-col items-center">
             <p className="text-sm">Todos os alunos estão sentados ou a lista está vazia.</p>
-            <button 
-              onClick={onAddStudent}
-              className="mt-4 text-sm text-blue-600 hover:underline"
-            >
-              + Adicionar Aluno
-            </button>
+            {!isLocked && (
+              <button 
+                onClick={onAddStudent}
+                className="mt-4 text-sm text-blue-600 hover:underline"
+              >
+                + Adicionar Aluno
+              </button>
+            )}
           </div>
         )}
       </div>

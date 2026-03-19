@@ -4,12 +4,14 @@ import { StudentData } from '../types';
 
 interface StudentCardProps {
   student: StudentData;
+  isLocked?: boolean;
 }
 
-export function StudentCard({ student }: StudentCardProps) {
+export function StudentCard({ student, isLocked }: StudentCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: student.id,
     data: student,
+    disabled: isLocked,
   });
 
   const style = {
@@ -22,9 +24,11 @@ export function StudentCard({ student }: StudentCardProps) {
     <div
       ref={setNodeRef}
       style={style}
-      {...listeners}
-      {...attributes}
-      className={`w-full h-full min-h-[3rem] bg-white border-2 flex items-center justify-center text-center p-1 cursor-grab active:cursor-grabbing transition-shadow ${
+      {...(isLocked ? {} : listeners)}
+      {...(isLocked ? {} : attributes)}
+      className={`w-full h-full min-h-[3rem] bg-white border-2 flex items-center justify-center text-center p-1 transition-shadow ${
+        isLocked ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'
+      } ${
         isDragging ? 'border-blue-500 shadow-lg' : 'border-slate-300 shadow-sm hover:border-blue-400 hover:shadow'
       } print:border-none print:shadow-none print:p-0 print:bg-transparent`}
     >

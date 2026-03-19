@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, useSensor, useSensors, PointerSensor, TouchSensor, closestCenter, DragOverlay } from '@dnd-kit/core';
-import { Trash2, Users, Loader2, Edit, Plus, Download, Menu, X as CloseIcon, DoorOpen, Monitor } from 'lucide-react';
+import { Trash2, Users, Loader2, Edit, Plus, Download, Menu, X as CloseIcon, DoorOpen, Monitor, Lock, Unlock, Save } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { ClassroomMap } from './components/ClassroomMap';
@@ -13,7 +13,7 @@ import { Sidebar } from './components/Sidebar';
 import { ClassData, StudentData } from './types';
 import { StudentCard } from './components/StudentCard';
 
-const API_URL = import.meta.env.VITE_API_URL || "https://script.google.com/macros/s/AKfycbzaw8GP992s3pX_yshZvYTAABtfUlABqNDA2p8sjkKztiM0-e76O7oNxU5jVDPPsYeZ/exec";
+const API_URL = "/api/data";
 
 export default function App() {
   const [classes, setClasses] = useState<ClassData[]>([]);
@@ -66,12 +66,6 @@ export default function App() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        if (!API_URL || API_URL === "URL_DO_APPS_SCRIPT_AQUI") {
-          console.warn("API_URL não configurada. Usando dados vazios.");
-          setIsLoading(false);
-          return;
-        }
-        
         const response = await fetch(API_URL);
         const data = await response.json();
 
@@ -81,7 +75,9 @@ export default function App() {
           rows: t.rows || 6,
           cols: t.cols || 6,
           doorPosition: t.doorPosition || 'right',
-          deskPosition: t.deskPosition || 'left'
+          deskPosition: t.deskPosition || 'left',
+          isLocked: t.isLocked || false,
+          lastUpdated: t.lastUpdated || null
         }));
         setClasses(formattedClasses);
         
@@ -117,16 +113,49 @@ export default function App() {
   }, []);
 
   const sendPostRequest = async (action: string, payload: any) => {
-    if (!API_URL || API_URL === "URL_DO_APPS_SCRIPT_AQUI") return;
     try {
       await fetch(API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, payload })
       });
     } catch (error) {
       console.error(`Erro na ação ${action}:`, error);
     }
+  };
+
+  const handleSaveMap = () => {
+    if (!selectedClassId) return;
+    const now = new Date();
+    const lastUpdated = now.toISOString();
+    
+    setClasses(classes.map(c => 
+      c.id === selectedClassId ? { ...c, isLocked: true, lastUpdated } : c
+    ));
+    sendPostRequest('saveMap', { id: selectedClassId, lastUpdated });
+    
+    setAlertModal({
+      isOpen: true,
+      title: 'Mapa Salvo',
+      message: 'O mapeamento foi salvo e travado com sucesso.'
+    });
+  };
+
+  const handleUnlockMap = () => {
+    if (!selectedClassId) return;
+    
+    setConfirmModal({
+      isOpen: true,
+      title: 'Editar Mapa',
+      message: 'Deseja realmente editar o mapa? Isso irá destravar as alterações.',
+      onConfirm: () => {
+        setClasses(classes.map(c => 
+          c.id === selectedClassId ? { ...c, isLocked: false } : c
+        ));
+        sendPostRequest('unlockMap', { id: selectedClassId });
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+      }
+    });
   };
 
   const sensors = useSensors(
@@ -169,12 +198,15 @@ export default function App() {
   const handleClassSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (newClassName.trim()) {
+      const rows = parseInt(newClassRows.toString()) || 1;
+      const cols = parseInt(newClassCols.toString()) || 1;
+      
       if (editingClassId) {
         const updatedClass = {
           id: editingClassId,
           name: newClassName.trim(),
-          rows: newClassRows,
-          cols: newClassCols,
+          rows,
+          cols,
           doorPosition: newDoorPosition,
           deskPosition: newDeskPosition
         };
@@ -184,8 +216,8 @@ export default function App() {
         const newClass = { 
           id: crypto.randomUUID(), 
           name: newClassName.trim(),
-          rows: newClassRows,
-          cols: newClassCols,
+          rows,
+          cols,
           doorPosition: newDoorPosition,
           deskPosition: newDeskPosition
         };
@@ -312,6 +344,18 @@ export default function App() {
       moveStudent(studentId, selectedSeatId);
       setSelectedSeatId(null);
       setSelectedStudentId(null);
+    } else if (selectedStudentId && selectedStudentId !== studentId) {
+      // If a student is already selected, and we click another student
+      // Check if the second student is on a seat
+      const student2 = students.find(s => s.id === studentId);
+      if (student2 && student2.seatId) {
+        // Swap or move to that seat
+        moveStudent(selectedStudentId, student2.seatId);
+        setSelectedStudentId(null);
+      } else {
+        // Both in sidebar, just change selection
+        setSelectedStudentId(studentId);
+      }
     } else {
       setSelectedStudentId(selectedStudentId === studentId ? null : studentId);
       setSelectedSeatId(null);
@@ -423,6 +467,28 @@ export default function App() {
                 <Trash2 size={18} className="sm:w-5 sm:h-5" />
               </button>
               <div className="hidden sm:block h-6 w-px bg-slate-300 mx-1"></div>
+              
+              {currentClass?.isLocked ? (
+                <button 
+                  onClick={handleUnlockMap}
+                  className="text-amber-600 hover:bg-amber-50 p-1.5 sm:p-2 rounded-md transition-colors flex items-center gap-1 sm:gap-2 font-medium text-sm"
+                  title="Editar Mapa"
+                >
+                  <Unlock size={18} className="sm:w-5 sm:h-5" />
+                  <span className="hidden md:inline">Editar Mapa</span>
+                </button>
+              ) : (
+                <button 
+                  onClick={handleSaveMap}
+                  className="text-blue-600 hover:bg-blue-50 p-1.5 sm:p-2 rounded-md transition-colors flex items-center gap-1 sm:gap-2 font-medium text-sm"
+                  title="Salvar Mapa"
+                >
+                  <Save size={18} className="sm:w-5 sm:h-5" />
+                  <span className="hidden md:inline">Salvar Mapa</span>
+                </button>
+              )}
+
+              <div className="hidden sm:block h-6 w-px bg-slate-300 mx-1"></div>
               <button 
                 onClick={handleDownloadPDF}
                 disabled={isGeneratingPDF}
@@ -474,6 +540,7 @@ export default function App() {
                 selectedStudentId={selectedStudentId}
                 onSelectStudent={handleSelectStudent}
                 onClose={() => setIsSidebarOpen(false)}
+                isLocked={currentClass?.isLocked || false}
               />
             </div>
             
@@ -496,7 +563,7 @@ export default function App() {
               </button>
 
               {/* Selection Status Bar */}
-              {(selectedStudentId || selectedSeatId) && (
+              {(selectedStudentId || selectedSeatId) && !currentClass?.isLocked && (
                 <div className="fixed top-20 left-1/2 -translate-x-1/2 z-40 bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-3 animate-bounce">
                   <span className="text-sm font-medium">
                     {selectedStudentId ? 'Selecione um lugar no mapa' : 'Selecione um aluno na lista'}
@@ -517,15 +584,17 @@ export default function App() {
                 students={seatedStudents} 
                 currentClass={currentClass} 
                 onDeleteStudent={requestDeleteStudent}
+                onUnseatStudent={(id) => moveStudent(id, 'sidebar')}
                 selectedSeatId={selectedSeatId}
                 onSelectSeat={handleSelectSeat}
                 onSelectStudent={handleSelectStudent}
+                isLocked={currentClass?.isLocked || false}
               />
             </div>
             <DragOverlay>
-              {activeStudent ? (
+              {activeStudent && !currentClass?.isLocked ? (
                 <div className="w-24 h-16 sm:w-28 sm:h-20 opacity-90 shadow-xl transform scale-100 sm:scale-105">
-                  <StudentCard student={activeStudent} />
+                  <StudentCard student={activeStudent} isLocked={false} />
                 </div>
               ) : null}
             </DragOverlay>
@@ -569,23 +638,69 @@ export default function App() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Qtd. de Filas (Colunas)</label>
-                    <input 
-                      type="number" 
-                      min="1" max="15" required
-                      value={newClassCols}
-                      onChange={e => setNewClassCols(parseInt(e.target.value) || 1)}
-                      className="w-full border border-slate-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
+                    <div className="flex items-center">
+                      <button 
+                        type="button"
+                        onClick={() => setNewClassCols(Math.max(1, (parseInt(newClassCols.toString()) || 1) - 1))}
+                        className="bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-l-md px-3 py-2 text-slate-600 transition-colors"
+                      >
+                        -
+                      </button>
+                      <input 
+                        type="number" 
+                        min="1" max="15" required
+                        value={newClassCols}
+                        onChange={e => {
+                          const val = e.target.value;
+                          if (val === '') {
+                            setNewClassCols('' as any);
+                          } else {
+                            setNewClassCols(parseInt(val) || 1);
+                          }
+                        }}
+                        className="w-full border-y border-slate-300 px-3 py-2 focus:ring-blue-500 focus:border-blue-500 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => setNewClassCols(Math.min(15, (parseInt(newClassCols.toString()) || 1) + 1))}
+                        className="bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-r-md px-3 py-2 text-slate-600 transition-colors"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Carteiras por Fila (Linhas)</label>
-                    <input 
-                      type="number" 
-                      min="1" max="15" required
-                      value={newClassRows}
-                      onChange={e => setNewClassRows(parseInt(e.target.value) || 1)}
-                      className="w-full border border-slate-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
+                    <div className="flex items-center">
+                      <button 
+                        type="button"
+                        onClick={() => setNewClassRows(Math.max(1, (parseInt(newClassRows.toString()) || 1) - 1))}
+                        className="bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-l-md px-3 py-2 text-slate-600 transition-colors"
+                      >
+                        -
+                      </button>
+                      <input 
+                        type="number" 
+                        min="1" max="15" required
+                        value={newClassRows}
+                        onChange={e => {
+                          const val = e.target.value;
+                          if (val === '') {
+                            setNewClassRows('' as any);
+                          } else {
+                            setNewClassRows(parseInt(val) || 1);
+                          }
+                        }}
+                        className="w-full border-y border-slate-300 px-3 py-2 focus:ring-blue-500 focus:border-blue-500 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => setNewClassRows(Math.min(15, (parseInt(newClassRows.toString()) || 1) + 1))}
+                        className="bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-r-md px-3 py-2 text-slate-600 transition-colors"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">

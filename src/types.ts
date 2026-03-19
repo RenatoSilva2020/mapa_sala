@@ -5,6 +5,8 @@ export type ClassData = {
   cols: number;
   doorPosition?: 'left' | 'right';
   deskPosition?: 'left' | 'right';
+  lastUpdated?: string;
+  isLocked?: boolean;
 };
 
 export type StudentData = {
