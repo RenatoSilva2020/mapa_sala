@@ -4,8 +4,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { DndContext, DragEndEvent, useSensor, useSensors, PointerSensor, closestCenter, DragOverlay } from '@dnd-kit/core';
-import { Trash2, Users, Loader2, Edit, Plus, Download } from 'lucide-react';
+import { DndContext, DragEndEvent, useSensor, useSensors, PointerSensor, TouchSensor, closestCenter, DragOverlay } from '@dnd-kit/core';
+import { Trash2, Users, Loader2, Edit, Plus, Download, Menu, X as CloseIcon, DoorOpen, Monitor } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { ClassroomMap } from './components/ClassroomMap';
@@ -22,6 +22,7 @@ export default function App() {
   const [activeStudent, setActiveStudent] = useState<StudentData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   // Class Modal State
   const [showClassModal, setShowClassModal] = useState(false);
@@ -29,6 +30,8 @@ export default function App() {
   const [newClassName, setNewClassName] = useState('');
   const [newClassRows, setNewClassRows] = useState(6);
   const [newClassCols, setNewClassCols] = useState(6);
+  const [newDoorPosition, setNewDoorPosition] = useState<'left' | 'right'>('right');
+  const [newDeskPosition, setNewDeskPosition] = useState<'left' | 'right'>('left');
 
   // Student Modal State
   const [showStudentModal, setShowStudentModal] = useState(false);
@@ -74,7 +77,9 @@ export default function App() {
           id: t.id,
           name: t.name,
           rows: t.rows || 6,
-          cols: t.cols || 6
+          cols: t.cols || 6,
+          doorPosition: t.doorPosition || 'right',
+          deskPosition: t.deskPosition || 'left'
         }));
         setClasses(formattedClasses);
         
@@ -125,7 +130,13 @@ export default function App() {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 5,
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 150,
+        tolerance: 10,
       },
     })
   );
@@ -135,6 +146,8 @@ export default function App() {
     setNewClassName('');
     setNewClassRows(6);
     setNewClassCols(6);
+    setNewDoorPosition('right');
+    setNewDeskPosition('left');
     setShowClassModal(true);
   };
 
@@ -145,6 +158,8 @@ export default function App() {
       setNewClassName(current.name);
       setNewClassRows(current.rows);
       setNewClassCols(current.cols);
+      setNewDoorPosition(current.doorPosition || 'right');
+      setNewDeskPosition(current.deskPosition || 'left');
       setShowClassModal(true);
     }
   };
@@ -157,7 +172,9 @@ export default function App() {
           id: editingClassId,
           name: newClassName.trim(),
           rows: newClassRows,
-          cols: newClassCols
+          cols: newClassCols,
+          doorPosition: newDoorPosition,
+          deskPosition: newDeskPosition
         };
         setClasses(classes.map(c => c.id === editingClassId ? updatedClass : c));
         sendPostRequest('editClass', updatedClass);
@@ -166,7 +183,9 @@ export default function App() {
           id: crypto.randomUUID(), 
           name: newClassName.trim(),
           rows: newClassRows,
-          cols: newClassCols
+          cols: newClassCols,
+          doorPosition: newDoorPosition,
+          deskPosition: newDeskPosition
         };
         setClasses([...classes, newClass]);
         setSelectedClassId(newClass.id);
@@ -305,21 +324,27 @@ export default function App() {
   return (
     <div className="h-screen flex flex-col bg-slate-100 font-sans print:h-auto print:bg-white">
       {/* Header */}
-      <header className="bg-white border-b px-6 py-4 flex items-center justify-between shadow-sm z-20 print:hidden">
-        <div className="flex items-center gap-3">
-          <div className="bg-blue-600 p-2 rounded-lg text-white">
-            <Users size={24} />
+      <header className="bg-white border-b px-4 sm:px-6 py-4 flex items-center justify-between shadow-sm z-30 print:hidden">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <button 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="sm:hidden p-2 hover:bg-slate-100 rounded-md text-slate-600"
+          >
+            {isSidebarOpen ? <CloseIcon size={24} /> : <Menu size={24} />}
+          </button>
+          <div className="bg-blue-600 p-1.5 sm:p-2 rounded-lg text-white">
+            <Users size={20} className="sm:w-6 sm:h-6" />
           </div>
-          <h1 className="text-xl font-bold text-slate-800">Mapeamento de Sala</h1>
+          <h1 className="text-lg sm:text-xl font-bold text-slate-800 truncate max-w-[120px] sm:max-w-none">Mapeamento</h1>
         </div>
         
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           {classes.length > 0 ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <select 
                 value={selectedClassId || ''} 
                 onChange={e => setSelectedClassId(e.target.value)}
-                className="border-slate-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 bg-slate-50"
+                className="border-slate-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 py-1.5 px-2 sm:py-2 sm:px-3 bg-slate-50 text-sm sm:text-base max-w-[100px] sm:max-w-none"
               >
                 {classes.map(c => (
                   <option key={c.id} value={c.id}>{c.name}</option>
@@ -327,46 +352,47 @@ export default function App() {
               </select>
               <button 
                 onClick={openEditClassModal}
-                className="text-slate-500 hover:bg-slate-100 p-2 rounded-md transition-colors"
+                className="text-slate-500 hover:bg-slate-100 p-1.5 sm:p-2 rounded-md transition-colors"
                 title="Editar Turma"
               >
-                <Edit size={20} />
+                <Edit size={18} className="sm:w-5 sm:h-5" />
               </button>
               <button 
                 onClick={requestDeleteClass}
-                className="text-red-500 hover:bg-red-50 p-2 rounded-md transition-colors"
+                className="text-red-500 hover:bg-red-50 p-1.5 sm:p-2 rounded-md transition-colors"
                 title="Excluir Turma"
               >
-                <Trash2 size={20} />
+                <Trash2 size={18} className="sm:w-5 sm:h-5" />
               </button>
-              <div className="h-6 w-px bg-slate-300 mx-1"></div>
+              <div className="hidden sm:block h-6 w-px bg-slate-300 mx-1"></div>
               <button 
                 onClick={handleDownloadPDF}
                 disabled={isGeneratingPDF}
-                className="text-emerald-600 hover:bg-emerald-50 p-2 rounded-md transition-colors flex items-center gap-2 font-medium text-sm disabled:opacity-50"
+                className="text-emerald-600 hover:bg-emerald-50 p-1.5 sm:p-2 rounded-md transition-colors flex items-center gap-1 sm:gap-2 font-medium text-sm disabled:opacity-50"
                 title="Baixar PDF"
               >
-                {isGeneratingPDF ? <Loader2 size={20} className="animate-spin" /> : <Download size={20} />}
-                <span className="hidden sm:inline">Baixar PDF</span>
+                {isGeneratingPDF ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} className="sm:w-5 sm:h-5" />}
+                <span className="hidden md:inline">Baixar PDF</span>
               </button>
             </div>
           ) : (
-            <span className="text-slate-500 text-sm">Nenhuma turma cadastrada</span>
+            <span className="hidden sm:inline text-slate-500 text-sm">Nenhuma turma cadastrada</span>
           )}
           
-          <div className="h-8 w-px bg-slate-200 mx-2"></div>
+          <div className="hidden sm:block h-8 w-px bg-slate-200 mx-2"></div>
           
           <button 
             onClick={openAddClassModal}
-            className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2"
+            className="bg-slate-800 hover:bg-slate-700 text-white p-2 sm:px-4 sm:py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2"
+            title="Nova Turma"
           >
-            <Plus size={16} /> Nova Turma
+            <Plus size={16} /> <span className="hidden sm:inline">Nova Turma</span>
           </button>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex overflow-hidden print:overflow-visible">
+      <main className="flex-1 flex overflow-hidden print:overflow-visible relative">
         {currentClass ? (
           <DndContext 
             sensors={sensors} 
@@ -374,12 +400,29 @@ export default function App() {
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-            <Sidebar 
-              students={unseatedStudents} 
-              onAddStudent={requestAddStudent} 
-              onDeleteStudent={requestDeleteStudent}
-            />
-            <div className="flex-1 overflow-auto p-8 print:p-0 print:overflow-visible">
+            <div className={`
+              fixed inset-0 z-40 bg-black/50 transition-opacity sm:hidden
+              ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}
+            `} onClick={() => setIsSidebarOpen(false)} />
+            
+            <div className={`
+              fixed inset-y-0 left-0 z-50 w-72 bg-white transform transition-transform duration-300 ease-in-out sm:relative sm:translate-x-0 sm:z-0
+              ${isSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}
+            `}>
+              <Sidebar 
+                students={unseatedStudents} 
+                onAddStudent={requestAddStudent} 
+                onDeleteStudent={requestDeleteStudent}
+              />
+              <button 
+                onClick={() => setIsSidebarOpen(false)}
+                className="sm:hidden absolute top-4 -right-12 bg-white p-2 rounded-r-md shadow-md text-slate-600"
+              >
+                <CloseIcon size={24} />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-auto p-4 sm:p-8 print:p-0 print:overflow-visible bg-slate-100">
               <ClassroomMap 
                 students={seatedStudents} 
                 currentClass={currentClass} 
@@ -388,7 +431,7 @@ export default function App() {
             </div>
             <DragOverlay>
               {activeStudent ? (
-                <div className="w-28 h-20 opacity-90 shadow-xl transform scale-105">
+                <div className="w-24 h-16 sm:w-28 sm:h-20 opacity-90 shadow-xl transform scale-100 sm:scale-105">
                   <StudentCard student={activeStudent} />
                 </div>
               ) : null}
@@ -450,6 +493,54 @@ export default function App() {
                       onChange={e => setNewClassRows(parseInt(e.target.value) || 1)}
                       className="w-full border border-slate-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
                     />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Posição da Porta</label>
+                    <div className="flex gap-2">
+                      <button 
+                        type="button"
+                        onClick={() => setNewDoorPosition('left')}
+                        className={`flex-1 py-2 px-3 rounded-md border text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                          newDoorPosition === 'left' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        Esquerda
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setNewDoorPosition('right')}
+                        className={`flex-1 py-2 px-3 rounded-md border text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                          newDoorPosition === 'right' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        Direita
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Posição da Mesa</label>
+                    <div className="flex gap-2">
+                      <button 
+                        type="button"
+                        onClick={() => setNewDeskPosition('left')}
+                        className={`flex-1 py-2 px-3 rounded-md border text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                          newDeskPosition === 'left' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        Esquerda
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setNewDeskPosition('right')}
+                        className={`flex-1 py-2 px-3 rounded-md border text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                          newDeskPosition === 'right' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        Direita
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -3,6 +3,8 @@ export type ClassData = {
   name: string;
   rows: number;
   cols: number;
+  doorPosition?: 'left' | 'right';
+  deskPosition?: 'left' | 'right';
 };
 
 export type StudentData = {

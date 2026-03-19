@@ -20,19 +20,23 @@ export function ClassroomMap({ students, currentClass, onDeleteStudent }: Classr
       </div>
 
       <div className="flex justify-between mb-16 px-4 print:mb-8">
-        <div className="w-36 h-20 bg-slate-200 border-2 border-slate-400 flex items-center justify-center text-center font-bold text-sm text-slate-700 shadow-sm print:border-black print:text-black">
+        <div className={`w-36 h-20 bg-slate-200 border-2 border-slate-400 flex items-center justify-center text-center font-bold text-sm text-slate-700 shadow-sm print:border-black print:text-black ${currentClass.doorPosition === 'right' ? 'order-last' : 'order-first'}`}>
           PORTA DA<br/>SALA
         </div>
-        <div className="w-36 h-20 bg-slate-200 border-2 border-slate-400 flex items-center justify-center text-center font-bold text-sm text-slate-700 shadow-sm print:border-black print:text-black">
+        <div className={`w-36 h-20 bg-slate-200 border-2 border-slate-400 flex items-center justify-center text-center font-bold text-sm text-slate-700 shadow-sm print:border-black print:text-black ${currentClass.deskPosition === 'right' ? 'order-last' : 'order-first'}`}>
           MESA DO<br/>PROFESSOR
         </div>
       </div>
 
-      <div className="overflow-x-auto pb-8 -mx-4 px-4 sm:mx-0 sm:px-0 print:overflow-visible print:pb-0">
-        <div 
-          className="grid gap-x-4 sm:gap-x-8 md:gap-x-16 gap-y-10 justify-items-center min-w-max mx-auto print:min-w-0 print:w-full print:gap-x-2 print:gap-y-6"
-          style={{ gridTemplateColumns: `repeat(${currentClass.cols}, minmax(112px, 1fr))` }}
-        >
+      <div className="overflow-x-auto pb-8 -mx-4 px-4 sm:mx-0 sm:px-0 print:overflow-visible print:pb-0 scrollbar-hide flex justify-center">
+        <div className="min-w-max origin-top transition-transform duration-300 sm:scale-100 scale-[0.55] xs:scale-[0.65] sm:mb-0 -mb-[55%] xs:-mb-[45%]">
+          <div 
+            className="grid gap-x-4 sm:gap-x-8 md:gap-x-16 gap-y-10 justify-items-center print:min-w-0 print:w-full print:gap-x-2 print:gap-y-6"
+            style={{ 
+              gridTemplateColumns: `repeat(${currentClass.cols}, minmax(100px, 1fr))`,
+              width: 'fit-content'
+            }}
+          >
           {Array.from({ length: currentClass.rows }).map((_, rowIndex) => (
             Array.from({ length: currentClass.cols }).map((_, colIndex) => {
               const seatId = `seat-${rowIndex}-${colIndex}`;
@@ -47,5 +51,6 @@ export function ClassroomMap({ students, currentClass, onDeleteStudent }: Classr
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 }
