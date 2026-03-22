@@ -29,7 +29,7 @@ export function Seat({ id, student, onDeleteStudent, onUnseatStudent, isSelected
           isSelected ? 'ring-4 ring-blue-500 ring-offset-2 rounded-lg scale-95 z-20' : ''
         } ${
           isOver ? 'bg-blue-50 border-blue-400' : 'bg-white border-slate-400'
-        } print:border-black print:bg-white print:w-32 print:h-16`}
+        } print:border-black print:bg-white print:w-28 print:h-20`}
       >
         {student ? (
           <div className="w-full h-full group relative">
@@ -74,7 +74,7 @@ export function Seat({ id, student, onDeleteStudent, onUnseatStudent, isSelected
         )}
       </div>
       {/* Chair drawing */}
-      <div className={`w-16 h-3 border-b-2 border-l-2 border-r-2 border-slate-400 mt-1 print:border-black print:w-20 print:h-2 transition-colors ${isSelected ? 'border-blue-500' : ''}`}></div>
+      <div className={`w-16 h-3 border-b-2 border-l-2 border-r-2 border-slate-400 mt-1 print:border-black print:w-18 print:h-3 transition-colors ${isSelected ? 'border-blue-500' : ''}`}></div>
     </div>
   );
 }

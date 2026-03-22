@@ -32,7 +32,7 @@ export function StudentCard({ student, isLocked }: StudentCardProps) {
         isDragging ? 'border-blue-500 shadow-lg' : 'border-slate-300 shadow-sm hover:border-blue-400 hover:shadow'
       } print:border-none print:shadow-none print:p-0 print:bg-transparent`}
     >
-      <span className="text-[10px] sm:text-xs font-semibold break-words line-clamp-3 uppercase text-slate-700 select-none print:text-black print:text-[10px] print:leading-tight">
+      <span className="text-[10px] sm:text-xs font-semibold break-words line-clamp-3 uppercase text-slate-700 select-none print:text-black print:text-[11px] print:leading-tight">
         {student.name}
       </span>
     </div>

@@ -108,7 +108,7 @@ export function ClassroomMap({
           </div>
 
           <div 
-            className="grid gap-x-2 sm:gap-x-8 md:gap-x-16 gap-y-6 sm:gap-y-10 justify-items-center print:min-w-0 print:gap-x-6 print:gap-y-4"
+            className="grid gap-x-2 sm:gap-x-8 md:gap-x-16 gap-y-6 sm:gap-y-10 justify-items-center print:min-w-0 print:gap-x-4 print:gap-y-8"
             style={{ 
               gridTemplateColumns: `repeat(${currentClass.cols}, minmax(0, 1fr))`,
               width: 'fit-content'
