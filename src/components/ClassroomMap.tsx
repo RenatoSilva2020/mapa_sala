@@ -55,7 +55,7 @@ export function ClassroomMap({
                 Atualizado em: {formatDate(currentClass.lastUpdated)}
               </p>
             )}
-            <p className="text-[10px] sm:text-sm text-slate-700 font-medium print:text-black max-w-2xl mx-auto print:text-[12px] print:leading-tight">
+            <p className="text-[10px] sm:text-sm text-slate-700 font-medium print:text-black max-w-2xl mx-auto print:text-[13px] print:leading-tight">
               O posicionamento de cada estudante deve ser respeitado de acordo com a organização do Mapa de Sala durante todas as aulas!
             </p>
           </div>
