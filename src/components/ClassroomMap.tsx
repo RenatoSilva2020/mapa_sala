@@ -23,8 +23,9 @@ export function ClassroomMap({
   isLocked
 }: ClassroomMapProps) {
   const formatDate = (dateString?: string) => {
-    if (!dateString) return null;
+    if (!dateString || dateString === "(vazio)") return null;
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return null;
     return date.toLocaleDateString('pt-BR');
   };
 
@@ -41,7 +42,7 @@ export function ClassroomMap({
       </div>
 
       {/* Header Grid */}
-      <div className="flex flex-col items-center mb-6 sm:mb-10 print:mb-1 print:w-full">
+      <div className="flex flex-col items-center mb-6 sm:mb-10 print:mb-6 print:w-full">
         {/* Text and Fields Column */}
         <div className="flex flex-col gap-3 w-full print:gap-2">
           <div className="text-center">
@@ -49,7 +50,7 @@ export function ClassroomMap({
               MAPEAMENTO DE SALA<br />
               <span className="text-lg sm:text-3xl print:text-xl">TURMA: {currentClass.name}</span>
             </h1>
-            {currentClass.lastUpdated && (
+            {formatDate(currentClass.lastUpdated) && (
               <p className="text-[10px] text-slate-500 mb-1 print:text-black print:text-[12px]">
                 Atualizado em: {formatDate(currentClass.lastUpdated)}
               </p>
@@ -64,7 +65,7 @@ export function ClassroomMap({
       <div className="overflow-x-auto pb-12 -mx-2 px-2 sm:mx-0 sm:px-0 print:overflow-visible print:pb-0 flex justify-start print:justify-center min-h-[500px] sm:min-h-0 w-full max-w-full">
         <div className="min-w-max mx-auto origin-top transition-transform duration-300 sm:scale-100 scale-[0.8] xs:scale-[0.9] sm:mb-0 -mb-[15%] xs:-mb-[5%] print:scale-100 print:mb-0 print:w-fit print:mx-auto print:min-w-0">
           {/* Door and Desk Row - Moved inside the fit-content container for alignment */}
-          <div className="flex justify-between mb-6 sm:mb-12 px-0 print:mb-1 w-full gap-2">
+          <div className="flex justify-between mb-6 sm:mb-12 px-0 print:mb-8 w-full gap-2">
             <div className={`flex-1 sm:flex-none sm:w-32 h-12 sm:h-16 bg-slate-200 border-2 border-slate-400 flex items-center justify-center text-center font-bold text-[9px] sm:text-xs text-slate-700 shadow-sm print:border-black print:text-black print:h-12 print:w-40 print:text-sm ${currentClass.doorPosition === 'right' ? 'order-last' : 'order-first'}`}>
               PORTA DA<br/>SALA
             </div>
