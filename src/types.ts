@@ -12,6 +12,8 @@ export type ClassData = {
   cols: number;
   doorPosition?: 'left' | 'right';
   deskPosition?: 'left' | 'right';
+  classRepresentative?: string;
+  referenceTeacher?: string;
   lastUpdated?: string;
   isLocked?: boolean;
   history?: HistoryEntry[];

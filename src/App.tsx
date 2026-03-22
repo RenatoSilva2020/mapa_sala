@@ -132,6 +132,8 @@ export default function App() {
             cols: t.cols || 6,
             doorPosition: t.doorPosition || 'right',
             deskPosition: t.deskPosition || 'left',
+            classRepresentative: t.classRepresentative || '',
+            referenceTeacher: t.referenceTeacher || '',
             isLocked: hasSeatedStudents ? true : (t.isLocked || false),
             lastUpdated: t.lastUpdated || null,
             history: classHistory.length > 0 ? classHistory : (t.history || [])
@@ -320,7 +322,9 @@ export default function App() {
         id: selectedClassId, 
         lastUpdated, 
         historyEntry,
-        students: classStudents 
+        students: classStudents,
+        classRepresentative: currentClass?.classRepresentative || '',
+        referenceTeacher: currentClass?.referenceTeacher || ''
       });
       
       setIsDirty(false);
@@ -410,7 +414,9 @@ export default function App() {
       const cols = parseInt(newClassCols.toString()) || 1;
       
       if (editingClassId) {
+        const current = classes.find(c => c.id === editingClassId);
         const updatedClass = {
+          ...current,
           id: editingClassId,
           name: newClassName.trim(),
           rows,
@@ -818,7 +824,7 @@ export default function App() {
             `} onClick={() => setIsSidebarOpen(false)} />
             
             <div className={`
-              fixed inset-y-0 left-0 z-50 w-72 bg-white transform transition-transform duration-300 ease-in-out sm:relative sm:translate-x-0 sm:z-0
+              fixed inset-y-0 left-0 z-50 w-72 bg-white transform transition-transform duration-300 ease-in-out sm:relative sm:translate-x-0 sm:z-0 print:hidden
               ${isSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}
             `}>
               <Sidebar 
@@ -832,7 +838,7 @@ export default function App() {
               />
             </div>
             
-            <div className="flex-1 overflow-auto p-4 sm:p-8 print:p-0 print:overflow-visible bg-slate-100 relative print:flex print:justify-center">
+            <div className="flex-1 overflow-auto p-4 sm:p-8 print:p-0 print:overflow-visible bg-slate-100 relative">
               {/* Floating Button for Mobile Student List */}
               <button 
                 onClick={() => setIsSidebarOpen(true)}
@@ -877,6 +883,14 @@ export default function App() {
                 onSelectSeat={handleSelectSeat}
                 onSelectStudent={handleSelectStudent}
                 isLocked={currentClass?.isLocked || false}
+                onUpdateRepresentative={(value) => {
+                  setIsDirty(true);
+                  setClasses(classes.map(c => c.id === selectedClassId ? { ...c, classRepresentative: value } : c));
+                }}
+                onUpdateTeacher={(value) => {
+                  setIsDirty(true);
+                  setClasses(classes.map(c => c.id === selectedClassId ? { ...c, referenceTeacher: value } : c));
+                }}
               />
             </div>
             <DragOverlay>
