@@ -132,8 +132,6 @@ export default function App() {
             cols: t.cols || 6,
             doorPosition: t.doorPosition || 'right',
             deskPosition: t.deskPosition || 'left',
-            classRepresentative: t.classRepresentative || '',
-            referenceTeacher: t.referenceTeacher || '',
             isLocked: hasSeatedStudents ? true : (t.isLocked || false),
             lastUpdated: t.lastUpdated || null,
             history: classHistory.length > 0 ? classHistory : (t.history || [])
@@ -322,9 +320,7 @@ export default function App() {
         id: selectedClassId, 
         lastUpdated, 
         historyEntry,
-        students: classStudents,
-        classRepresentative: currentClass?.classRepresentative || '',
-        referenceTeacher: currentClass?.referenceTeacher || ''
+        students: classStudents
       });
       
       setIsDirty(false);
@@ -883,14 +879,6 @@ export default function App() {
                 onSelectSeat={handleSelectSeat}
                 onSelectStudent={handleSelectStudent}
                 isLocked={currentClass?.isLocked || false}
-                onUpdateRepresentative={(value) => {
-                  setIsDirty(true);
-                  setClasses(classes.map(c => c.id === selectedClassId ? { ...c, classRepresentative: value } : c));
-                }}
-                onUpdateTeacher={(value) => {
-                  setIsDirty(true);
-                  setClasses(classes.map(c => c.id === selectedClassId ? { ...c, referenceTeacher: value } : c));
-                }}
               />
             </div>
             <DragOverlay>
