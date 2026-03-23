@@ -69,6 +69,19 @@ async function startServer() {
               history: [...(t.history || []), payload.historyEntry]
             } : t
           );
+          // Update students' positions
+          if (payload.students) {
+            payload.students.forEach((updatedStudent: any) => {
+              const index = data.estudantes.findIndex((s: any) => s.id === updatedStudent.id);
+              if (index !== -1) {
+                data.estudantes[index] = { 
+                  ...data.estudantes[index], 
+                  row: updatedStudent.row, 
+                  col: updatedStudent.col 
+                };
+              }
+            });
+          }
           break;
         case "unlockMap":
           data.turmas = data.turmas.map((t: any) => 
