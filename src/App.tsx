@@ -13,8 +13,8 @@ import { Sidebar } from './components/Sidebar';
 import { ClassData, StudentData, HistoryEntry } from './types';
 import { StudentCard } from './components/StudentCard';
 
-const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbwBR0A-QOWfJdgiKjHdSXJavFgcJmMHpVOWbVKBqBZXtW3tkturTg9nx-srSQGqsTSY/exec";
-const API_URL = import.meta.env.VITE_API_URL || DEFAULT_API_URL;
+const API_URL = import.meta.env.VITE_API_URL || "/api/data";
+const SPREADSHEET_URL = "https://script.google.com/macros/s/AKfycbwBR0A-QOWfJdgiKjHdSXJavFgcJmMHpVOWbVKBqBZXtW3tkturTg9nx-srSQGqsTSY/exec";
 
 export default function App() {
   const [classes, setClasses] = useState<ClassData[]>([]);
