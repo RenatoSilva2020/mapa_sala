@@ -13,7 +13,7 @@ import { Sidebar } from './components/Sidebar';
 import { ClassData, StudentData, HistoryEntry } from './types';
 import { StudentCard } from './components/StudentCard';
 
-const API_URL = import.meta.env.VITE_API_URL || "/api/data";
+const API_URL = "https://script.google.com/macros/s/AKfycbwDr8_6tnR3cjsHFLcJiXJwtkyJD7Poc5_kD49RFA4OZMByTL8goD42y2wpNpGomnBt/exec";
 
 export default function App() {
   const [classes, setClasses] = useState<ClassData[]>([]);
@@ -222,25 +222,20 @@ export default function App() {
 
   const sendPostRequest = async (action: string, payload: any) => {
     const body = JSON.stringify({ action, payload });
-    const isExternal = API_URL.startsWith('http');
+    console.log(`[API] Enviando ação "${action}":`, payload);
     
     try {
-      const options: RequestInit = {
+      // Usamos no-cors para evitar problemas de preflight com o Google Script
+      // O dado será enviado, mas não poderemos ler a resposta (opaque response)
+      const response = await fetch(API_URL, {
         method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'text/plain',
+        },
         body: body
-      };
-
-      if (isExternal) {
-        // Usamos no-cors para evitar problemas de preflight com o Google Script
-        // O dado será enviado, mas não poderemos ler a resposta (opaque response)
-        options.mode = 'no-cors';
-        options.headers = { 'Content-Type': 'text/plain' };
-      } else {
-        // Para o backend local, usamos application/json
-        options.headers = { 'Content-Type': 'application/json' };
-      }
-
-      const response = await fetch(API_URL, options);
+      });
+      
       return response;
     } catch (error) {
       console.error(`[API] Erro na ação "${action}":`, error);
