@@ -699,7 +699,7 @@ export default function App() {
           <div className="bg-blue-600 p-1.5 sm:p-2 rounded-lg text-white">
             <Users size={20} className="sm:w-6 sm:h-6" />
           </div>
-          <h1 className="text-lg sm:text-xl font-bold text-slate-800 truncate max-w-[120px] sm:max-w-none">Mapeamento</h1>
+          <h1 className="text-lg sm:text-xl font-bold text-slate-800 truncate max-w-[120px] sm:max-w-none">Mapeamento de Saça - CECY CARDOSO</h1>
         </div>
         
         <div className="flex items-center gap-2 sm:gap-4">
