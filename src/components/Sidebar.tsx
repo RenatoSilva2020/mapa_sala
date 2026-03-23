@@ -45,8 +45,8 @@ export function Sidebar({ students, onAddStudent, onDeleteStudent, selectedStude
         ref={setNodeRef}
         className={`flex-1 overflow-auto p-4 flex flex-col gap-3 transition-colors ${isOver ? 'bg-blue-50/50' : ''}`}
       >
-        {students.map(student => (
-          <div key={student.id} className="relative group h-16">
+        {students.map((student, idx) => (
+          <div key={student.id || `student-${idx}`} className="relative group h-16">
             <div 
               onClick={() => !isLocked && onSelectStudent(student.id)}
               className={`w-full h-full transition-all ${selectedStudentId === student.id ? 'ring-4 ring-blue-500 ring-offset-2 rounded-lg scale-95' : ''} ${isLocked ? 'cursor-default' : ''}`}

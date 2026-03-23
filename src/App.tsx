@@ -710,8 +710,8 @@ export default function App() {
                 onChange={e => setSelectedClassId(e.target.value)}
                 className="border-slate-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 py-1.5 px-2 sm:py-2 sm:px-3 bg-slate-50 text-sm sm:text-base max-w-[100px] sm:max-w-none"
               >
-                {classes.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
+                {classes.map((c, idx) => (
+                  <option key={c.id || `class-${idx}`} value={c.id}>{c.name}</option>
                 ))}
               </select>
               <button 
@@ -1195,8 +1195,8 @@ export default function App() {
             <div className="flex-1 overflow-auto">
               {currentClass?.history && currentClass.history.length > 0 ? (
                 <div className="space-y-4">
-                  {[...currentClass.history].reverse().map((entry) => (
-                    <div key={entry.id} className="border-l-4 border-blue-500 pl-4 py-2 bg-slate-50 rounded-r-lg">
+                  {[...currentClass.history].reverse().map((entry, idx) => (
+                    <div key={entry.id || `history-${idx}`} className="border-l-4 border-blue-500 pl-4 py-2 bg-slate-50 rounded-r-lg">
                       <div className="flex justify-between items-start">
                         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                           entry.action === 'save' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
