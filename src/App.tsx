@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { DndContext, DragEndEvent, useSensor, useSensors, PointerSensor, TouchSensor, closestCenter, DragOverlay } from '@dnd-kit/core';
-import { Trash2, Users, Loader2, Edit, Plus, Download, Menu, X, DoorOpen, Monitor, Lock, Unlock, Save, History, LogOut } from 'lucide-react';
+import { Trash2, Users, Loader2, Edit, Plus, Download, Menu, X as CloseIcon, DoorOpen, Monitor, Lock, Unlock, Save, History, LogOut } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { ClassroomMap } from './components/ClassroomMap';
@@ -14,7 +14,6 @@ import { ClassData, StudentData, HistoryEntry } from './types';
 import { StudentCard } from './components/StudentCard';
 
 const API_URL = import.meta.env.VITE_API_URL || "/api/data";
-const SPREADSHEET_URL = "https://script.google.com/macros/s/AKfycbwBR0A-QOWfJdgiKjHdSXJavFgcJmMHpVOWbVKBqBZXtW3tkturTg9nx-srSQGqsTSY/exec";
 
 export default function App() {
   const [classes, setClasses] = useState<ClassData[]>([]);
@@ -22,7 +21,6 @@ export default function App() {
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [activeStudent, setActiveStudent] = useState<StudentData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [apiError, setApiError] = useState<string | null>(null);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -92,21 +90,9 @@ export default function App() {
 
   useEffect(() => {
     const fetchData = async () => {
-      setIsLoading(true);
-      setApiError(null);
-      console.log(`[API] Buscando dados de: ${API_URL}`);
-      
       try {
-        // Adiciona timestamp para evitar cache em navegadores mobile
-        const fetchUrl = API_URL.startsWith('http') 
-          ? `${API_URL}${API_URL.includes('?') ? '&' : '?'}t=${Date.now()}`
-          : API_URL;
-
-        const response = await fetch(fetchUrl);
-        if (!response.ok) throw new Error(`Erro HTTP: ${response.status}`);
-        
+        const response = await fetch(API_URL);
         const data = await response.json();
-        console.log('[API] Dados recebidos com sucesso');
 
         const formattedStudents = (data.estudantes || []).map((s: any) => {
           let seatId = null;
@@ -159,7 +145,6 @@ export default function App() {
         }
       } catch (error) {
         console.error("Erro ao buscar dados:", error);
-        setApiError("Não foi possível carregar os dados da planilha. Verifique a conexão ou a URL do script.");
       } finally {
         setIsLoading(false);
       }
@@ -238,7 +223,6 @@ export default function App() {
   const sendPostRequest = async (action: string, payload: any) => {
     const body = JSON.stringify({ action, payload });
     const isExternal = API_URL.startsWith('http');
-    console.log(`[API] Enviando ação "${action}" para ${isExternal ? 'Planilha' : 'Backend Local'}`);
     
     try {
       const options: RequestInit = {
@@ -257,15 +241,9 @@ export default function App() {
       }
 
       const response = await fetch(API_URL, options);
-      console.log(`[API] Resposta da ação "${action}" enviada`);
       return response;
     } catch (error) {
       console.error(`[API] Erro na ação "${action}":`, error);
-      setAlertModal({
-        isOpen: true,
-        title: 'Erro de Sincronização',
-        message: 'Não foi possível salvar as alterações na planilha. Verifique sua conexão.'
-      });
     }
   };
 
@@ -673,27 +651,9 @@ export default function App() {
   if (isLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-slate-100">
-        <div className="flex flex-col items-center text-slate-500 max-w-md px-6 text-center">
-          {apiError ? (
-            <>
-              <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
-                <X size={32} />
-              </div>
-              <h2 className="text-xl font-bold text-slate-800 mb-2">Erro de Conexão</h2>
-              <p className="text-slate-600 mb-6">{apiError}</p>
-              <button 
-                onClick={() => window.location.reload()}
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-              >
-                Tentar Novamente
-              </button>
-            </>
-          ) : (
-            <>
-              <Loader2 size={48} className="animate-spin mb-4 text-blue-600" />
-              <p className="font-medium">Carregando dados da planilha...</p>
-            </>
-          )}
+        <div className="flex flex-col items-center text-slate-500">
+          <Loader2 size={48} className="animate-spin mb-4 text-blue-600" />
+          <p className="font-medium">Carregando dados da planilha...</p>
         </div>
       </div>
     );
@@ -730,7 +690,7 @@ export default function App() {
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             className="sm:hidden p-2 hover:bg-slate-100 rounded-md text-slate-600 relative"
           >
-            {isSidebarOpen ? <X size={24} /> : (
+            {isSidebarOpen ? <CloseIcon size={24} /> : (
               <>
                 <Menu size={24} />
                 {unseatedStudents.length > 0 && (
@@ -910,7 +870,7 @@ export default function App() {
                     }}
                     className="bg-white/20 hover:bg-white/30 rounded-full p-1"
                   >
-                    <X size={14} />
+                    <CloseIcon size={14} />
                   </button>
                 </div>
               )}
@@ -1234,7 +1194,7 @@ export default function App() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold text-slate-800">Histórico de Alterações</h2>
               <button onClick={() => setShowHistoryModal(false)} className="text-slate-500 hover:text-slate-700">
-                <X size={24} />
+                <CloseIcon size={24} />
               </button>
             </div>
             <div className="flex-1 overflow-auto">

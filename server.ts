@@ -7,42 +7,10 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
   const DATA_FILE = path.join(process.cwd(), "data.json");
-  const SPREADSHEET_URL = process.env.VITE_API_URL || "https://script.google.com/macros/s/AKfycbwBR0A-QOWfJdgiKjHdSXJavFgcJmMHpVOWbVKBqBZXtW3tkturTg9nx-srSQGqsTSY/exec";
-
-  // Function to sync data to Google Spreadsheet
-  const syncToSpreadsheet = async (action: string, payload: any) => {
-    try {
-      console.log(`[SYNC] Enviando ação "${action}" para a planilha...`);
-      const response = await fetch(SPREADSHEET_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify({ action, payload })
-      });
-      console.log(`[SYNC] Resposta da planilha: ${response.status}`);
-    } catch (error) {
-      console.error("[SYNC] Erro ao sincronizar com a planilha:", error);
-    }
-  };
 
   // Initialize data file if it doesn't exist
   if (!fs.existsSync(DATA_FILE)) {
     fs.writeFileSync(DATA_FILE, JSON.stringify({ turmas: [], estudantes: [] }));
-  }
-
-  // Initial sync from spreadsheet on startup
-  try {
-    console.log("[SYNC] Buscando dados iniciais da planilha...");
-    const syncUrl = `${SPREADSHEET_URL}${SPREADSHEET_URL.includes('?') ? '&' : '?'}t=${Date.now()}`;
-    const response = await fetch(syncUrl);
-    if (response.ok) {
-      const data = await response.json();
-      if (data && (data.turmas || data.estudantes)) {
-        fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-        console.log("[SYNC] Dados da planilha sincronizados localmente com sucesso.");
-      }
-    }
-  } catch (error) {
-    console.error("[SYNC] Erro ao buscar dados iniciais da planilha:", error);
   }
 
   app.use(express.json());
@@ -57,7 +25,7 @@ async function startServer() {
     }
   });
 
-  app.post("/api/data", async (req, res) => {
+  app.post("/api/data", (req, res) => {
     try {
       const { action, payload } = req.body;
       const data = JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
@@ -127,10 +95,6 @@ async function startServer() {
       }
 
       fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-      
-      // Sync to spreadsheet in the background
-      syncToSpreadsheet(action, payload);
-      
       res.json({ status: "ok" });
     } catch (error) {
       console.error("Error saving data:", error);
